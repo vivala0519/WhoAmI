@@ -1,20 +1,32 @@
-import type { SVGProps } from 'react';
+import type { SVGProps } from "react";
 export type IconName =
-  | 'search'
-  | 'arrow'
-  | 'close'
-  | 'help'
-  | 'chart'
-  | 'share'
-  | 'refresh'
-  | 'check'
-  | 'calendar'
-  | 'infinity'
-  | 'eye'
-  | 'chevron'
-  | 'trophy';
-export function Icon({ name, ...props }: SVGProps<SVGSVGElement> & { name: IconName }) {
+  | "search"
+  | "arrow"
+  | "close"
+  | "help"
+  | "chart"
+  | "share"
+  | "refresh"
+  | "check"
+  | "calendar"
+  | "infinity"
+  | "eye"
+  | "chevron"
+  | "trophy"
+  | "sun"
+  | "moon";
+export function Icon({
+  name,
+  ...props
+}: SVGProps<SVGSVGElement> & { name: IconName }) {
   const paths: Record<IconName, React.ReactNode> = {
+    sun: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
+      </>
+    ),
+    moon: <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />,
     search: (
       <>
         <circle cx="10.5" cy="10.5" r="6.5" />

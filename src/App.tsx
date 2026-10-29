@@ -1,11 +1,13 @@
-import { useEffect, useId, useReducer, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
-import { Icon } from './icons';
+import { useEffect, useId, useReducer, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { Icon } from "./icons";
+import { ParticleBall } from "./ParticleBall";
 import {
   activeRound,
   categories,
   compare,
   DATA_VERSION,
+  DAILY_COUNT,
   dayKey,
   MAX_ATTEMPTS,
   money,
@@ -15,22 +17,27 @@ import {
   restore,
   searchPlayers,
   shareText,
-} from './game';
-import type { Clue, Mode, Player } from './game';
+} from "./game";
+import type { Clue, Mode, Player } from "./game";
 
-const STORAGE_KEY = 'who-am-i-ko:v1';
-type ModalType = 'help' | 'stats' | 'reveal' | 'share' | null;
+const STORAGE_KEY = "who-am-i-ko:v1";
+type ModalType = "help" | "stats" | "reveal" | "share" | null;
 function Kit({
-  number = '?',
-  color = '#c5ed83',
-  className = '',
+  number = "?",
+  color = "var(--accent)",
+  className = "",
 }: {
   number?: string;
   color?: string;
   className?: string;
 }) {
   return (
-    <svg className={className} viewBox="0 0 240 240" fill="none" aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 240 240"
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="m77 46-46 26 20 44 25-12v91c34 13 54 13 88 0v-91l25 12 20-44-46-26c-9 14-18 21-43 21S85 60 77 46Z"
         fill={color}
@@ -60,8 +67,14 @@ function Kit({
 }
 function PlayerAvatar({ player }: { player: Player }) {
   return (
-    <span className="avatar" style={{ '--kit-color': player.color } as React.CSSProperties}>
-      <Kit number={player.number === null ? '·' : String(player.number)} color="currentColor" />
+    <span
+      className="avatar"
+      style={{ "--kit-color": player.color } as React.CSSProperties}
+    >
+      <Kit
+        number={player.number === null ? "·" : String(player.number)}
+        color="currentColor"
+      />
     </span>
   );
 }
@@ -105,24 +118,33 @@ function Modal({
 }
 function Tile({ clue, small = false }: { clue: Clue; small?: boolean }) {
   const state =
-    clue.match === 'exact' ? '일치' : clue.match === 'near' ? '같은 포지션 계열' : '불일치';
+    clue.match === "exact"
+      ? "일치"
+      : clue.match === "near"
+        ? "같은 포지션 계열"
+        : "불일치";
   return (
     <div
-      className={`clue ${clue.match} ${small ? 'small' : ''}`}
-      title={`${clue.label}: ${clue.value} · ${state}${clue.direction ? (clue.direction === 'up' ? ' · 정답이 더 높음' : ' · 정답이 더 낮음') : ''}`}
-      aria-label={`${clue.label} ${clue.value}, ${state}${clue.direction ? (clue.direction === 'up' ? ', 정답이 더 높음' : ', 정답이 더 낮음') : ''}`}
+      className={`clue ${clue.match} ${small ? "small" : ""}`}
+      title={`${clue.label}: ${clue.value} · ${state}${clue.direction ? (clue.direction === "up" ? " · 정답이 더 높음" : " · 정답이 더 낮음") : ""}`}
+      aria-label={`${clue.label} ${clue.value}, ${state}${clue.direction ? (clue.direction === "up" ? ", 정답이 더 높음" : ", 정답이 더 낮음") : ""}`}
     >
       <span className="clue-content">
-        {clue.key === 'country' && (
+        {clue.key === "country" && (
           <span className="country-mark" aria-hidden="true">
             {clue.value.slice(0, 1)}
           </span>
         )}
-        <strong className={clue.display ? 'entity-code' : ''}>{clue.display ?? clue.value}</strong>
+        <strong className={clue.display ? "entity-code" : ""}>
+          {clue.display ?? clue.value}
+        </strong>
         {clue.direction && (
-          <Icon name="arrow" className={clue.direction === 'down' ? 'down' : ''} />
-        )}{' '}
-        {clue.match === 'exact' && <Icon name="check" className="tile-check" />}
+          <Icon
+            name="arrow"
+            className={clue.direction === "down" ? "down" : ""}
+          />
+        )}{" "}
+        {clue.match === "exact" && <Icon name="check" className="tile-check" />}
       </span>
       <span className="clue-label">{clue.label}</span>
     </div>
@@ -137,7 +159,7 @@ function Search({
   guesses: string[];
   onGuess: (id: string) => void;
 }) {
-  const [query, setQuery] = useState(''),
+  const [query, setQuery] = useState(""),
     [focused, setFocused] = useState(false),
     [highlight, setHighlight] = useState(0);
   const results = searchPlayers(query, mode, guesses),
@@ -146,13 +168,13 @@ function Search({
   const open = focused && query.trim().length > 0;
   const pick = (p: Player) => {
     onGuess(p.id);
-    setQuery('');
+    setQuery("");
     setHighlight(0);
     input.current?.focus();
   };
   return (
     <div className="search-wrap">
-      <div className={`search-input ${focused ? 'focused' : ''}`}>
+      <div className={`search-input ${focused ? "focused" : ""}`}>
         <Icon name="search" width="23" height="23" />
         <input
           ref={input}
@@ -161,10 +183,14 @@ function Search({
           aria-autocomplete="list"
           aria-controls={listId}
           aria-expanded={open}
-          aria-activedescendant={open && results[highlight] ? `${listId}-${highlight}` : undefined}
+          aria-activedescendant={
+            open && results[highlight] ? `${listId}-${highlight}` : undefined
+          }
           autoComplete="off"
           placeholder={
-            guesses.length ? '다음으로 떠오르는 선수는?' : '선수 이름을 입력해 첫 추측을 시작하세요'
+            guesses.length
+              ? "다음으로 떠오르는 선수는?"
+              : "선수 이름을 입력해 첫 추측을 시작하세요"
           }
           value={query}
           onChange={(e) => {
@@ -173,25 +199,29 @@ function Search({
           }}
           onFocus={() => setFocused(true)}
           onBlur={(e) => {
-            if (!e.currentTarget.parentElement?.parentElement?.contains(e.relatedTarget))
+            if (
+              !e.currentTarget.parentElement?.parentElement?.contains(
+                e.relatedTarget,
+              )
+            )
               setFocused(false);
           }}
           onKeyDown={(e) => {
             if (e.nativeEvent.isComposing) return;
-            if (e.key === 'ArrowDown') {
+            if (e.key === "ArrowDown") {
               e.preventDefault();
               setFocused(true);
               setHighlight((i) => Math.min(i + 1, results.length - 1));
             }
-            if (e.key === 'ArrowUp') {
+            if (e.key === "ArrowUp") {
               e.preventDefault();
               setHighlight((i) => Math.max(i - 1, 0));
             }
-            if (e.key === 'Enter' && open && results[highlight]) {
+            if (e.key === "Enter" && open && results[highlight]) {
               e.preventDefault();
               pick(results[highlight]);
             }
-            if (e.key === 'Escape') setFocused(false);
+            if (e.key === "Escape") setFocused(false);
           }}
         />
         {query ? (
@@ -199,7 +229,7 @@ function Search({
             className="icon-button clear-search"
             aria-label="검색어 지우기"
             onClick={() => {
-              setQuery('');
+              setQuery("");
               input.current?.focus();
             }}
           >
@@ -212,7 +242,12 @@ function Search({
         )}
       </div>
       {open && (
-        <div className="search-results" id={listId} role="listbox" aria-label="검색 결과">
+        <div
+          className="search-results"
+          id={listId}
+          role="listbox"
+          aria-label="검색 결과"
+        >
           {results.length ? (
             <>
               <div className="result-hint">선택하면 추측이 제출돼요</div>
@@ -223,7 +258,7 @@ function Search({
                   aria-selected={i === highlight}
                   id={`${listId}-${i}`}
                   key={p.id}
-                  className={`search-result ${i === highlight ? 'highlight' : ''}`}
+                  className={`search-result ${i === highlight ? "highlight" : ""}`}
                   onMouseEnter={() => setHighlight(i)}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => pick(p)}
@@ -256,14 +291,17 @@ function Search({
 function HelpContent() {
   return (
     <>
-      <p className="modal-intro">7가지 단서를 따라, 8번 안에 축구 선수의 정체를 맞혀보세요.</p>
+      <p className="modal-intro">
+        6가지 단서를 따라, 8번 안에 축구 선수의 정체를 맞혀보세요.
+      </p>
       <ol className="help-steps">
         <li>
           <span>01</span>
           <div>
             <strong>선수 이름을 검색하세요</strong>
             <p>
-              한국어, 영문, 초성 검색을 지원해요. 목록에서 선수를 선택하면 한 번의 기회를 사용해요.
+              한국어, 영문, 초성 검색을 지원해요. 목록에서 선수를 선택하면 한
+              번의 기회를 사용해요.
             </p>
           </div>
         </li>
@@ -271,7 +309,9 @@ function HelpContent() {
           <span>02</span>
           <div>
             <strong>색과 방향을 확인하세요</strong>
-            <p>초록은 정확히 일치, 노랑은 같은 포지션 계열, 빨강은 불일치예요.</p>
+            <p>
+              초록은 정확히 일치, 노랑은 같은 포지션 계열, 빨강은 불일치예요.
+            </p>
             <div className="legend">
               <span>
                 <i className="green" />
@@ -292,33 +332,76 @@ function HelpContent() {
           <span>03</span>
           <div>
             <strong>정답을 좁혀보세요</strong>
-            <p>출생연도·등번호·시장가치의 화살표는 정답의 값이 더 높은지, 낮은지 알려줘요.</p>
+            <p>
+              출생연도·등번호·시장가치의 화살표는 정답의 값이 더 높은지, 낮은지
+              알려줘요.
+            </p>
           </div>
         </li>
       </ol>
       <div className="example-grid">
-        <Tile clue={{ key: 'country', label: '국적', value: '프랑스', match: 'exact' }} />
-        <Tile clue={{ key: 'position', label: '포지션', value: 'CM', match: 'near' }} />
         <Tile
-          clue={{ key: 'value', label: '시장가치', value: '약 746.18억 원', match: 'miss', direction: 'up' }}
+          clue={{
+            key: "country",
+            label: "국적",
+            value: "프랑스",
+            match: "exact",
+          }}
+        />
+        <Tile
+          clue={{
+            key: "position",
+            label: "포지션",
+            value: "CM",
+            match: "near",
+          }}
+        />
+        <Tile
+          clue={{
+            key: "value",
+            label: "시장가치",
+            value: "약 746.18억 원",
+            match: "miss",
+            direction: "up",
+          }}
         />
       </div>
       <p className="example-caption">
-        예시: 프랑스 선수이자 미드필더이고, 시장가치는 약 746.18억 원보다 높아요.
+        예시: 프랑스 선수이자 미드필더이고, 시장가치는 약 746.18억 원보다
+        높아요.
       </p>
       <div className="mode-explanation">
         <strong>오늘의 도전</strong>
         <p>
-          프리미어리그, 시장가치 약 44.77억 원 이상 선수 중 매일 3명. 한국 시간 자정에 새로운 문제가 열려요.
+          프리미어리그, 시장가치 약 44.77억 원 이상 선수 중 매일 1명. 한국 시간
+          자정에 새로운 문제가 열려요.
         </p>
         <strong>무제한 모드</strong>
-        <p>수집 시점의 세계 시장가치 상위 250명 중 한 명. 원하는 만큼 계속 도전하세요.</p>
-        <p>시장가치는 2026년 10월 28일 기준 환율(1유로 = 1,492.35원)로 환산한 금액이에요.</p>
+        <p>
+          수집 시점의 세계 시장가치 상위 250명 중 한 명. 원하는 만큼 계속
+          도전하세요.
+        </p>
+        <p>시장가치는 1유로 = 1,492.35원으로 환산한 금액이에요.</p>
       </div>
     </>
   );
 }
 export default function App() {
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    document.documentElement.dataset.theme === "light" ? "light" : "dark",
+  );
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", theme === "light" ? "#f4f6f9" : "#101722");
+    try {
+      localStorage.setItem("who-am-i-theme", theme);
+    } catch {
+      /* Theme still works without storage. */
+    }
+  }, [theme]);
   const [storageError, setStorageError] = useState(false);
   const [state, dispatch] = useReducer(reducer, undefined, () => {
     try {
@@ -328,13 +411,13 @@ export default function App() {
     }
   });
   const [modal, setModal] = useState<ModalType>(null),
-    [toast, setToast] = useState(''),
+    [toast, setToast] = useState(""),
     [tick, setTick] = useState(Date.now());
   const [copied, setCopied] = useState(false);
   const round = activeRound(state),
     answer = playerMap.get(round.answer)!,
-    finished = round.status !== 'playing',
-    done = state.daily.filter((r) => r.status !== 'playing').length;
+    finished = round.status !== "playing",
+    done = state.daily.filter((r) => r.status !== "playing").length;
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -346,37 +429,41 @@ export default function App() {
   useEffect(() => {
     const update = () => {
       setTick(Date.now());
-      dispatch({ type: 'day', date: dayKey() });
+      dispatch({ type: "day", date: dayKey() });
     };
     const timer = setInterval(update, 1000);
-    window.addEventListener('focus', update);
+    window.addEventListener("focus", update);
     return () => {
       clearInterval(timer);
-      window.removeEventListener('focus', update);
+      window.removeEventListener("focus", update);
     };
   }, []);
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(''), 3500);
+    const t = setTimeout(() => setToast(""), 3500);
     return () => clearTimeout(t);
   }, [toast]);
   const tomorrow = Date.parse(`${state.date}T00:00:00+09:00`) + 86400000;
   const seconds = Math.max(0, Math.floor((tomorrow - tick) / 1000)),
-    countdown = [Math.floor(seconds / 3600), Math.floor(seconds / 60) % 60, seconds % 60]
-      .map((v) => String(v).padStart(2, '0'))
-      .join(':');
+    countdown = [
+      Math.floor(seconds / 3600),
+      Math.floor(seconds / 60) % 60,
+      seconds % 60,
+    ]
+      .map((v) => String(v).padStart(2, "0"))
+      .join(":");
   const share = async () => {
     const text = shareText(state);
     try {
       await navigator.clipboard.writeText(text);
-      setToast('결과를 복사했어요. 친구에게 공유해 보세요.');
+      setToast("결과를 복사했어요. 친구에게 공유해 보세요.");
       setCopied(true);
     } catch {
-      setModal('share');
+      setModal("share");
     }
   };
   const selectMode = (mode: Mode) => {
-    dispatch({ type: 'mode', mode });
+    dispatch({ type: "mode", mode });
     setCopied(false);
   };
   return (
@@ -385,40 +472,45 @@ export default function App() {
         <section className="hero" aria-labelledby="game-title">
           <div className="hero-copy">
             <div className="eyebrow">
-              <span className="live-dot" /> FOOTBALL IDENTITY QUIZ{' '}
-              <span className="edition">한국어 에디션</span>
+              <span className="live-dot" /> FOOTBALL IDENTITY QUIZ{" "}
             </div>
             <h1 id="game-title">
-              WHO <span className="logo-am">AM</span> I<span className="logo-question">?</span>
+              WHO <span className="logo-am">AM</span> I
+              <span className="logo-question">?</span>
             </h1>
             <p className="hero-korean">이 선수, 누구일까요?</p>
             <p className="hero-description">
               당신의 축구 지식에 도전하세요.
-              <br className="mobile-break" /> 7가지 단서, 단 8번의 기회.
+              <br className="mobile-break" /> 6가지 단서, 단 8번의 기회.
             </p>
           </div>
-          <div className="hero-art">
-            <div className="orbit orbit-one" />
-            <div className="orbit orbit-two" />
-            <div className="art-cross cross-one" />
-            <div className="art-cross cross-two" />
-            <Kit className="mystery-kit" />
-            <span className="art-tag tag-one">선수의 정체는?</span>
-            <span className="art-tag tag-two">
-              <span className="live-dot" /> SCOUTING IN PROGRESS
-            </span>
+          <div className="hero-art" aria-hidden="true">
+            <ParticleBall theme={theme} />
           </div>
           <div className="hero-utilities">
             <button
+              type="button"
+              className="icon-button theme-toggle"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              aria-label={
+                theme === "dark" ? "밝은 테마로 전환" : "어두운 테마로 전환"
+              }
+              title={
+                theme === "dark" ? "밝은 테마로 전환" : "어두운 테마로 전환"
+              }
+            >
+              <Icon name={theme === "dark" ? "sun" : "moon"} />
+            </button>
+            <button
               className="icon-button"
-              onClick={() => setModal('stats')}
+              onClick={() => setModal("stats")}
               aria-label="내 기록 보기"
             >
               <Icon name="chart" />
             </button>
             <button
               className="icon-button"
-              onClick={() => setModal('help')}
+              onClick={() => setModal("help")}
               aria-label="게임 방법 보기"
             >
               <Icon name="help" />
@@ -430,33 +522,35 @@ export default function App() {
             <button
               id="daily-tab"
               role="tab"
-              aria-selected={state.mode === 'daily'}
+              aria-selected={state.mode === "daily"}
               aria-controls="game-panel"
-              className={state.mode === 'daily' ? 'selected' : ''}
-              onClick={() => selectMode('daily')}
+              className={state.mode === "daily" ? "selected" : ""}
+              onClick={() => selectMode("daily")}
             >
               <Icon name="calendar" />
-              오늘의 도전<span className="tab-count">3</span>
+              오늘의 도전<span className="tab-count">{DAILY_COUNT}</span>
             </button>
             <button
               id="unlimited-tab"
               role="tab"
-              aria-selected={state.mode === 'unlimited'}
+              aria-selected={state.mode === "unlimited"}
               aria-controls="game-panel"
-              className={state.mode === 'unlimited' ? 'selected' : ''}
-              onClick={() => selectMode('unlimited')}
+              className={state.mode === "unlimited" ? "selected" : ""}
+              onClick={() => selectMode("unlimited")}
             >
               <Icon name="infinity" />
               무제한
             </button>
           </div>
           <span className="date-label">
-            {state.date.replaceAll('-', '.')} <span className="date-dot" /> 새로운 도전이 기다려요
+            {state.date.replaceAll("-", ".")} <span className="date-dot" />{" "}
+            새로운 도전이 기다려요
           </span>
         </div>
         {storageError && (
           <p className="storage-warning" role="status">
-            브라우저에 기록을 저장할 수 없어요. 현재 화면에서는 계속 플레이할 수 있어요.
+            브라우저에 기록을 저장할 수 없어요. 현재 화면에서는 계속 플레이할 수
+            있어요.
           </p>
         )}
         <div className="content-grid">
@@ -464,27 +558,56 @@ export default function App() {
             className="game-panel"
             id="game-panel"
             role="tabpanel"
-            aria-labelledby={state.mode === 'daily' ? 'daily-tab' : 'unlimited-tab'}
+            aria-labelledby={
+              state.mode === "daily" ? "daily-tab" : "unlimited-tab"
+            }
           >
             <div className="board-top">
               <div className="pool-badges">
                 <span className="pool-badge">
-                  <span className="pool-symbol">{state.mode === 'daily' ? 'PL' : 'W'}</span>
-                  {state.mode === 'daily' ? '프리미어리그' : '월드 클래스'}
+                  <span
+                    className={
+                      state.mode === "daily"
+                        ? "pool-symbol premier-league-symbol"
+                        : "pool-symbol"
+                    }
+                    aria-hidden="true"
+                  >
+                    {state.mode === "daily" ? (
+                      <img
+                        src="/premier-league.svg"
+                        width="24"
+                        height="24"
+                        alt=""
+                      />
+                    ) : (
+                      "W"
+                    )}
+                  </span>
+                  {state.mode === "daily" ? "프리미어리그" : "월드 클래스"}
                 </span>
-                <span className="pool-detail">
-                  {state.mode === 'daily' ? '€3M 이상' : `TOP ${pools.unlimited.length}`}
-                </span>
+                {/*<span className="pool-detail">*/}
+                {/*  {state.mode === "daily"*/}
+                {/*    ? ``*/}
+                {/*    : `TOP ${pools.unlimited.length}`}*/}
+                {/*</span>*/}
               </div>
-              {state.mode === 'daily' ? (
-                <div className="daily-progress" aria-label={`${done}/3 완료`}>
+              {state.mode === "daily" ? (
+                <div
+                  className="daily-progress"
+                  aria-label={`${done}/${DAILY_COUNT} 완료`}
+                >
                   {state.daily.map((r, i) => (
                     <span
                       key={i}
-                      className={`day-step ${state.active === i ? 'current' : ''} ${r.status === 'won' ? 'solved' : ''} ${r.status === 'lost' || r.status === 'revealed' ? 'failed' : ''}`}
-                      aria-label={`${i + 1}번째 문제${r.status !== 'playing' ? ' 완료' : ''}`}
+                      className={`day-step ${state.active === i ? "current" : ""} ${r.status === "won" ? "solved" : ""} ${r.status === "lost" || r.status === "revealed" ? "failed" : ""}`}
+                      aria-label={`${i + 1}번째 문제${r.status !== "playing" ? " 완료" : ""}`}
                     >
-                      {r.status === 'won' ? <Icon name="check" width="15" height="15" /> : i + 1}
+                      {r.status === "won" ? (
+                        <Icon name="check" width="15" height="15" />
+                      ) : (
+                        i + 1
+                      )}
                     </span>
                   ))}
                 </div>
@@ -497,21 +620,21 @@ export default function App() {
             </div>
             <div className="question-area">
               <span className="section-kicker">
-                {state.mode === 'daily'
-                  ? `DAILY CHALLENGE · ${String(state.active + 1).padStart(2, '0')}/03`
-                  : 'UNLIMITED CHALLENGE'}
+                {state.mode === "daily"
+                  ? "DAILY CHALLENGE"
+                  : "UNLIMITED CHALLENGE"}
               </span>
               <h2>
                 {finished
-                  ? round.status === 'won'
-                    ? '정답을 찾았어요!'
-                    : '정답을 확인해 보세요'
-                  : '어떤 선수를 찾고 있을까요?'}
+                  ? round.status === "won"
+                    ? "정답을 찾았어요!"
+                    : "정답을 확인해 보세요"
+                  : "어떤 선수를 찾고 있을까요?"}
               </h2>
               <p>
                 {finished
-                  ? '단서를 연결한 당신의 추측을 돌아보세요.'
-                  : '이름을 검색하고, 단서를 모아 정답에 가까워져 보세요.'}
+                  ? "단서를 연결한 당신의 추측을 돌아보세요."
+                  : "이름을 검색하고, 단서를 모아 정답에 가까워져 보세요."}
               </p>
             </div>
             {!finished && (
@@ -519,23 +642,23 @@ export default function App() {
                 key={`${state.mode}-${round.answer}`}
                 mode={state.mode}
                 guesses={round.guesses}
-                onGuess={(id) => dispatch({ type: 'guess', id })}
+                onGuess={(id) => dispatch({ type: "guess", id })}
               />
             )}
             {finished && (
               <div
-                className={`result-card ${round.status === 'won' ? 'result-won' : ''}`}
+                className={`result-card ${round.status === "won" ? "result-won" : ""}`}
                 role="status"
               >
                 <div className="result-player">
                   <PlayerAvatar player={answer} />
                   <div>
                     <span className="result-eyebrow">
-                      {round.status === 'won'
-                        ? 'GREAT SCOUTING'
-                        : round.status === 'revealed'
-                          ? 'ANSWER REVEALED'
-                          : 'FULL TIME'}
+                      {round.status === "won"
+                        ? "GREAT SCOUTING"
+                        : round.status === "revealed"
+                          ? "ANSWER REVEALED"
+                          : "FULL TIME"}
                     </span>
                     <h3>{answer.name}</h3>
                     <p>
@@ -543,34 +666,42 @@ export default function App() {
                     </p>
                   </div>
                   <span className="result-score">
-                    {round.status === 'won' ? `${round.guesses.length}/8` : 'X/8'}
+                    {round.status === "won"
+                      ? `${round.guesses.length}/8`
+                      : "X/8"}
                   </span>
                 </div>
                 <p className="result-message">
-                  {round.status === 'won'
+                  {round.status === "won"
                     ? `${round.guesses.length}번 만에 선수를 맞혔어요.`
-                    : round.status === 'revealed'
-                      ? '정답 공개로 이번 도전을 마쳤어요.'
-                      : '8번의 기회를 모두 사용했어요. 다음 선수에게 도전해 보세요.'}
+                    : round.status === "revealed"
+                      ? "정답 공개로 이번 도전을 마쳤어요."
+                      : "8번의 기회를 모두 사용했어요. 다음 선수에게 도전해 보세요."}
                 </p>
                 <div className="result-buttons">
                   <button className="button secondary" onClick={share}>
-                    <Icon name={copied ? 'check' : 'share'} />
-                    {copied ? '복사 완료' : '결과 공유'}
+                    <Icon name={copied ? "check" : "share"} />
+                    {copied ? "복사 완료" : "결과 공유"}
                   </button>
-                  {state.mode === 'unlimited' || state.active < 2 ? (
+                  {state.mode === "unlimited" ||
+                  state.active < DAILY_COUNT - 1 ? (
                     <button
                       className="button primary"
                       onClick={() => {
-                        dispatch({ type: 'next' });
+                        dispatch({ type: "next" });
                         setCopied(false);
                       }}
                     >
-                      {state.mode === 'unlimited' ? '다음 선수 도전' : '다음 문제'}
+                      {state.mode === "unlimited"
+                        ? "다음 선수 도전"
+                        : "다음 문제"}
                       <Icon name="chevron" />
                     </button>
                   ) : (
-                    <button className="button primary" onClick={() => selectMode('unlimited')}>
+                    <button
+                      className="button primary"
+                      onClick={() => selectMode("unlimited")}
+                    >
                       무제한으로 계속하기
                       <Icon name="chevron" />
                     </button>
@@ -581,8 +712,8 @@ export default function App() {
             <div className="attempts-caption">
               <span>
                 <span className="attempt-number">
-                  {String(round.guesses.length).padStart(2, '0')}
-                </span>{' '}
+                  {String(round.guesses.length).padStart(2, "0")}
+                </span>{" "}
                 / 08 <span className="attempt-label">시도</span>
               </span>
               <div
@@ -590,12 +721,19 @@ export default function App() {
                 aria-label={`${8 - round.guesses.length}번의 기회 남음`}
               >
                 {Array.from({ length: 8 }, (_, i) => (
-                  <i key={i} className={i < round.guesses.length ? 'used' : ''} />
+                  <i
+                    key={i}
+                    className={i < round.guesses.length ? "used" : ""}
+                  />
                 ))}
               </div>
             </div>
-            <div className="guess-history" aria-live="polite" aria-label="추측 기록">
-              {finished && round.status !== 'won' && (
+            <div
+              className="guess-history"
+              aria-live="polite"
+              aria-label="추측 기록"
+            >
+              {finished && round.status !== "won" && (
                 <article className="guess-row">
                   <div className="guess-row-title">
                     <strong>정답의 선수 정보</strong>
@@ -617,7 +755,10 @@ export default function App() {
                         <div className="guess-row-title">
                           <div>
                             <span className="guess-order">
-                              {String(round.guesses.length - index).padStart(2, '0')}
+                              {String(round.guesses.length - index).padStart(
+                                2,
+                                "0",
+                              )}
                             </span>
                             <strong>{p.name}</strong>
                             <span className="guess-latin">{p.latin}</span>
@@ -654,13 +795,13 @@ export default function App() {
                     <p>
                       떠오르는 선수부터 시작해 보세요.
                       <br />
-                      추측할 때마다 7가지 단서가 공개돼요.
+                      추측할 때마다 6가지 단서가 공개돼요.
                     </p>
                     <div className="empty-categories">
                       {categories.map((c, i) => (
                         <span key={c}>
                           {c}
-                          <i>{String(i + 1).padStart(2, '0')}</i>
+                          <i>{String(i + 1).padStart(2, "0")}</i>
                         </span>
                       ))}
                     </div>
@@ -677,12 +818,7 @@ export default function App() {
                 <i className="red" />
                 불일치
               </span>
-              {!finished ? (
-                <button className="text-button" onClick={() => setModal('reveal')}>
-                  <Icon name="eye" width="17" height="17" />
-                  정답 공개
-                </button>
-              ) : (
+              {finished && (
                 <span className="finished-label">
                   이번 도전 완료
                   <Icon name="check" width="16" height="16" />
@@ -711,7 +847,7 @@ export default function App() {
               <div className="mini-step">
                 <span>2</span>
                 <div>
-                  <strong>7가지 단서를 읽으세요</strong>
+                  <strong>6가지 단서를 읽으세요</strong>
                   <p>
                     색은 일치 여부를,
                     <br />
@@ -730,21 +866,19 @@ export default function App() {
                   </p>
                 </div>
               </div>
-              <button className="aside-link" onClick={() => setModal('help')}>
+              <button className="aside-link" onClick={() => setModal("help")}>
                 자세한 게임 방법
                 <Icon name="chevron" width="17" height="17" />
               </button>
             </section>
             <section className="daily-card">
               <span className="section-kicker">EVERY DAY, A NEW CHALLENGE</span>
-              <h3>매일, 새로운 3명의 선수</h3>
-              <p>오늘의 축구 감각을 확인해 보세요.</p>
               <div className="daily-card-bottom">
                 <div>
                   <span>오늘의 진행</span>
                   <strong>
                     {done}
-                    <small> / 3</small>
+                    <small> / {DAILY_COUNT}</small>
                   </strong>
                 </div>
                 <div className="countdown">
@@ -753,33 +887,23 @@ export default function App() {
                 </div>
               </div>
               <div className="daily-track">
-                <span style={{ width: `${(done / 3) * 100}%` }} />
+                <span style={{ width: `${(done / DAILY_COUNT) * 100}%` }} />
               </div>
             </section>
-            <button className="records-card" onClick={() => setModal('stats')}>
+            <button className="records-card" onClick={() => setModal("stats")}>
               <span>
                 <Icon name="chart" />
                 <strong>나의 스카우팅 기록</strong>
               </span>
               <Icon name="chevron" />
             </button>
-            <p className="data-note">
-              선수 정보는 {DATA_VERSION.replaceAll('-', '.')} 수집 기준이에요. 진행 기록은 이
-              브라우저에 저장돼요.
-            </p>
           </aside>
         </div>
         <footer className="page-footer">
           <div className="footer-wordmark">
             WHO AM I<span>?</span>
-            <span className="footer-divider" />
-            한국어 축구 퀴즈
           </div>
-          <p>7가지 단서. 8번의 기회. 당신의 축구 지식.</p>
-          <a href="https://www.transfermarkt.co.uk/whoami" target="_blank" rel="noreferrer">
-            원본 게임 참고
-            <Icon name="chevron" width="14" height="14" />
-          </a>
+          <p>6가지 단서. 8번의 기회. 당신의 축구 지식.</p>
         </footer>
       </main>
       {toast && (
@@ -791,31 +915,35 @@ export default function App() {
       {modal && (
         <Modal
           title={
-            modal === 'help'
-              ? '게임 방법'
-              : modal === 'stats'
-                ? '나의 스카우팅 기록'
-                : modal === 'reveal'
-                  ? '정답을 공개할까요?'
-                  : '결과 공유'
+            modal === "help"
+              ? "게임 방법"
+              : modal === "stats"
+                ? "나의 스카우팅 기록"
+                : modal === "reveal"
+                  ? "정답을 공개할까요?"
+                  : "결과 공유"
           }
           onClose={() => setModal(null)}
         >
-          {modal === 'help' ? (
+          {modal === "help" ? (
             <HelpContent />
-          ) : modal === 'reveal' ? (
+          ) : modal === "reveal" ? (
             <>
               <p className="modal-intro">
-                정답을 공개하면 이번 문제는 미해결로 기록되고, 남은 기회를 사용할 수 없어요.
+                정답을 공개하면 이번 문제는 미해결로 기록되고, 남은 기회를
+                사용할 수 없어요.
               </p>
               <div className="modal-actions">
-                <button className="button secondary" onClick={() => setModal(null)}>
+                <button
+                  className="button secondary"
+                  onClick={() => setModal(null)}
+                >
                   계속 추측하기
                 </button>
                 <button
                   className="button primary"
                   onClick={() => {
-                    dispatch({ type: 'reveal' });
+                    dispatch({ type: "reveal" });
                     setModal(null);
                   }}
                 >
@@ -823,9 +951,11 @@ export default function App() {
                 </button>
               </div>
             </>
-          ) : modal === 'share' ? (
+          ) : modal === "share" ? (
             <>
-              <p className="modal-intro">아래 결과를 복사해 친구에게 공유하세요.</p>
+              <p className="modal-intro">
+                아래 결과를 복사해 친구에게 공유하세요.
+              </p>
               <textarea
                 className="share-fallback"
                 aria-label="공유할 결과"
@@ -838,15 +968,15 @@ export default function App() {
             <>
               <div className="stats-grid">
                 {[
-                  [state.stats.played, '완료한 도전'],
+                  [state.stats.played, "완료한 도전"],
                   [
                     state.stats.played
                       ? `${Math.round((state.stats.won / state.stats.played) * 100)}%`
-                      : '—',
-                    '정답률',
+                      : "—",
+                    "정답률",
                   ],
-                  [state.stats.streak, '현재 연속 정답'],
-                  [state.stats.best, '최고 연속 정답'],
+                  [state.stats.streak, "현재 연속 정답"],
+                  [state.stats.best, "최고 연속 정답"],
                 ].map(([v, label]) => (
                   <div key={label}>
                     <strong>{v}</strong>
@@ -871,10 +1001,13 @@ export default function App() {
                 ))}
               </div>
               {!state.stats.played && (
-                <p className="example-caption">첫 번째 도전을 완료하면 기록이 쌓여요.</p>
+                <p className="example-caption">
+                  첫 번째 도전을 완료하면 기록이 쌓여요.
+                </p>
               )}
               <p className="data-note">
-                오늘의 도전과 무제한 기록을 합산해요. 정답 공개는 미해결로 기록돼요.
+                오늘의 도전과 무제한 기록을 합산해요. 정답 공개는 미해결로
+                기록돼요.
               </p>
             </>
           )}

@@ -4,6 +4,7 @@ import {
   activeRound,
   compare,
   dailyAnswers,
+  DAILY_COUNT,
   dayKey,
   initialState,
   MAX_ATTEMPTS,
@@ -35,10 +36,13 @@ test('snapshot contains complete, localized real player attributes', () => {
     }),
   );
 });
-test('daily selection is deterministic, distinct, and changes by day', () => {
-  assert.deepEqual(dailyAnswers('2026-10-29'), dailyAnswers('2026-10-29'));
-  assert.equal(new Set(dailyAnswers('2026-10-29')).size, 3);
-  assert.notDeepEqual(dailyAnswers('2026-10-29'), dailyAnswers('2026-10-30'));
+test('daily selection contains one eligible answer, is deterministic, and changes by day', () => {
+  assert.equal(DAILY_COUNT, 1);
+  const answers = dailyAnswers('2026-10-29');
+  assert.equal(answers.length, 1);
+  assert.ok(pools.daily.includes(answers[0]));
+  assert.deepEqual(answers, dailyAnswers('2026-10-29'));
+  assert.notDeepEqual(answers, dailyAnswers('2026-10-30'));
 });
 test('Korean calendar turns over at Seoul midnight', () => {
   assert.equal(dayKey(new Date('2026-10-29T14:59:59Z')), '2026-10-29');
@@ -55,7 +59,9 @@ test('only position category gets partial match; numbers use exact equality and 
       countryId: 'other',
     };
   const clues = compare(p, a);
-  assert.equal(clues.length, 7);
+  assert.deepEqual(clues.map((c) => c.key), [
+    'country', 'club', 'position', 'birthYear', 'number', 'value',
+  ]);
   assert.equal(clues.find((c) => c.key === 'position')!.match, 'near');
   assert.equal(clues.find((c) => c.key === 'country')!.match, 'miss');
   for (const key of ['birthYear', 'number', 'value']) {
@@ -83,7 +89,7 @@ test('duplicate or ineligible guesses do not spend a chance', () => {
   assert.equal(reducer(s, { type: 'guess', id }), s);
   assert.equal(reducer(s, { type: 'guess', id: 'bogus' }), s);
 });
-test('win records once, blocks further guesses and reveal, and next creates new round', () => {
+test('daily win records once and blocks further guesses, reveal, and advancement', () => {
   let s = initialState();
   s = reducer(s, { type: 'guess', id: activeRound(s).answer });
   assert.equal(activeRound(s).status, 'won');
@@ -91,9 +97,9 @@ test('win records once, blocks further guesses and reveal, and next creates new 
   assert.equal(s.stats.distribution[0], 1);
   assert.equal(reducer(s, { type: 'reveal' }), s);
   assert.equal(reducer(s, { type: 'guess', id: activeRound(s).answer }), s);
-  s = reducer(s, { type: 'next' });
-  assert.equal(s.active, 1);
-  assert.equal(activeRound(s).status, 'playing');
+  assert.equal(reducer(s, { type: 'next' }), s);
+  assert.equal(s.active, 0);
+  assert.equal(s.daily.length, 1);
 });
 test('eight unsuccessful guesses end a round and reset streak', () => {
   let s = initialState();
@@ -114,7 +120,7 @@ test('reveal finishes without adding a guess and does not count as a win', () =>
   assert.equal(s.stats.played, 1);
   assert.equal(s.stats.won, 0);
 });
-test('both modes preserve separate progress and completed daily cannot advance past three', () => {
+test('both modes preserve progress, unlimited can advance, and the sole daily round cannot', () => {
   let s = initialState();
   const guess = pools.daily.find((id) => id !== s.daily[0].answer)!;
   s = reducer(s, { type: 'guess', id: guess });
@@ -123,14 +129,15 @@ test('both modes preserve separate progress and completed daily cannot advance p
   const oldAnswer = s.unlimited.answer;
   s = reducer(s, { type: 'next' });
   assert.notEqual(s.unlimited.answer, oldAnswer);
+  assert.equal(s.unlimited.status, 'playing');
+  assert.deepEqual(s.unlimited.guesses, []);
   s = reducer(s, { type: 'mode', mode: 'daily' });
   assert.deepEqual(activeRound(s).guesses, [guess]);
-  for (let i = 0; i < 3; i++) {
-    s = reducer(s, { type: 'reveal' });
-    s = reducer(s, { type: 'next' });
-  }
-  assert.equal(s.active, 2);
-  assert.equal(s.daily.filter((r) => r.status !== 'playing').length, 3);
+  assert.equal(reducer(s, { type: 'daily', index: 1 }), s);
+  s = reducer(s, { type: 'reveal' });
+  assert.equal(s.active, 0);
+  assert.equal(s.daily.length, 1);
+  assert.equal(activeRound(s).status, 'revealed');
   assert.equal(reducer(s, { type: 'next' }), s);
 });
 test('restore validates saved data and new day keeps stats and unlimited progress', () => {
@@ -143,7 +150,9 @@ test('restore validates saved data and new day keeps stats and unlimited progres
   assert.equal(next.stats.played, 2);
   assert.equal(next.unlimited.status, 'won');
   assert.equal(next.active, 0);
+  assert.equal(next.daily.length, 1);
   assert.ok(next.daily.every((r) => r.status === 'playing'));
+  assert.deepEqual(next.daily.map((r) => r.answer), dailyAnswers('2026-10-30'));
   for (const raw of [
     'broken',
     '{}',
@@ -153,11 +162,44 @@ test('restore validates saved data and new day keeps stats and unlimited progres
   ])
     assert.equal(restore(raw).stats.played, 0);
 });
+test('restore migrates three-round saves while retaining the first round, statistics, and unlimited progress', () => {
+  let s = initialState('2026-10-29');
+  s = reducer(s, { type: 'guess', id: s.daily[0].answer });
+  s = reducer(s, { type: 'mode', mode: 'unlimited' });
+  s = reducer(s, { type: 'guess', id: s.unlimited.answer });
+  const otherAnswers = pools.daily.filter((id) => id !== s.daily[0].answer).slice(0, 2);
+  const legacy = {
+    ...s,
+    mode: 'daily',
+    active: 2,
+    daily: [
+      s.daily[0],
+      { answer: otherAnswers[0], guesses: [], status: 'revealed' },
+      { answer: otherAnswers[1], guesses: [], status: 'playing' },
+    ],
+    stats: { ...s.stats, played: 3, streak: 0 },
+  };
+  const migrated = restore(JSON.stringify(legacy), '2026-10-29');
+  assert.equal(migrated.mode, 'daily');
+  assert.equal(migrated.active, 0);
+  assert.deepEqual(migrated.daily, [legacy.daily[0]]);
+  assert.deepEqual(migrated.stats, legacy.stats);
+  assert.deepEqual(migrated.unlimited, legacy.unlimited);
+  assert.equal(reducer(migrated, { type: 'next' }), migrated);
+  assert.equal(reducer(migrated, { type: 'guess', id: migrated.daily[0].answer }), migrated);
+  assert.deepEqual(restore(JSON.stringify(migrated), '2026-10-29'), migrated);
+  const nextDay = restore(JSON.stringify(legacy), '2026-10-30');
+  assert.equal(nextDay.active, 0);
+  assert.equal(nextDay.daily.length, 1);
+  assert.equal(nextDay.daily[0].status, 'playing');
+  assert.deepEqual(nextDay.stats, legacy.stats);
+  assert.deepEqual(nextDay.unlimited, legacy.unlimited);
+});
 test('shared result contains feedback grid without revealing the answer', () => {
   let s = initialState();
   s = reducer(s, { type: 'guess', id: activeRound(s).answer });
   const shared = shareText(s);
   assert.match(shared, /1\/8/);
-  assert.match(shared, /🟩{7}/u);
+  assert.match(shared, /^🟩{6}$/mu);
   assert.ok(!shared.includes(playerMap.get(activeRound(s).answer)!.name));
 });

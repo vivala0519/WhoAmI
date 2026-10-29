@@ -1,10 +1,10 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 @theme {
   --color-navy: #061b38;
-  --color-lime: #c5ed83;
+  --color-brand: #8dbbff;
   --font-sans:
-    'Segoe UI', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic',
-    sans-serif;
+    "Segoe UI", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+    "Malgun Gothic", sans-serif;
 }
 :root {
   font-family: var(--font-sans);
@@ -16,7 +16,7 @@
   --panel: #0c2342;
   --line: #28415e;
   --muted: #a5b6cd;
-  --lime: #c5ed83;
+  --accent: #8dbbff;
   --green: #5bb979;
   --red: #cc5261;
   --yellow: #d3ac54;
@@ -54,7 +54,7 @@ button {
 }
 button:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--lime);
+  outline: 2px solid var(--accent);
   outline-offset: 4px;
 }
 button {
@@ -84,9 +84,11 @@ button:active {
 }
 .app-shell {
   min-height: 100vh;
-  background: radial-gradient(ellipse at 75% 0%, #11304c90, transparent 45%), var(--bg);
-  padding: calc(34px + env(safe-area-inset-top)) max(20px, env(safe-area-inset-right))
-    max(34px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  background:
+    radial-gradient(ellipse at 75% 0%, #11304c90, transparent 45%), var(--bg);
+  padding: calc(34px + env(safe-area-inset-top))
+    max(20px, env(safe-area-inset-right)) max(34px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-left));
 }
 .page {
   max-width: 1240px;
@@ -118,8 +120,8 @@ button:active {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--lime);
-  box-shadow: 0 0 13px #c5ed8355;
+  background: var(--accent);
+  box-shadow: 0 0 13px #8dbbff55;
 }
 .edition {
   margin-left: 9px;
@@ -127,7 +129,7 @@ button:active {
   padding-left: 18px;
   letter-spacing: 0.3px;
   font-size: 12px;
-  color: var(--lime);
+  color: var(--accent);
 }
 h1 {
   font-family: Arial, sans-serif;
@@ -141,7 +143,7 @@ h1 {
   color: #f2f6fb;
 }
 .logo-question {
-  color: var(--lime);
+  color: var(--accent);
   display: inline-block;
   transform: rotate(7deg);
   margin-left: 2px;
@@ -161,94 +163,12 @@ h1 {
   display: none;
 }
 .hero-art {
+  pointer-events: none;
   position: absolute;
   right: 95px;
   top: -15px;
   width: 340px;
   height: 300px;
-}
-.mystery-kit {
-  position: absolute;
-  width: 250px;
-  left: 45px;
-  top: 18px;
-  transform: rotate(10deg);
-  filter: drop-shadow(0 0 25px #c5ed8312);
-}
-.orbit {
-  position: absolute;
-  border: 1px solid #aac7c51a;
-  border-radius: 50%;
-  left: 22px;
-  top: 16px;
-  width: 296px;
-  height: 260px;
-  transform: rotate(-24deg);
-}
-.orbit-two {
-  left: 45px;
-  top: 0;
-  width: 245px;
-  height: 290px;
-  transform: rotate(33deg);
-  border-style: dashed;
-}
-.art-cross {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  color: #a6b7c6;
-  opacity: 0.5;
-}
-.art-cross:before,
-.art-cross:after {
-  content: '';
-  position: absolute;
-  background: currentColor;
-}
-.art-cross:before {
-  height: 1px;
-  width: 12px;
-  top: 6px;
-}
-.art-cross:after {
-  height: 12px;
-  width: 1px;
-  left: 6px;
-}
-.cross-one {
-  top: 59px;
-  left: 14px;
-}
-.cross-two {
-  right: 9px;
-  bottom: 70px;
-}
-.art-tag {
-  position: absolute;
-  font-size: 12px;
-  padding: 8px 12px;
-  background: #0d2846;
-  border: 1px solid #33506a;
-  border-radius: 5px;
-  letter-spacing: 0.3px;
-  box-shadow: 0 5px 20px #03112340;
-}
-.tag-one {
-  right: -6px;
-  top: 68px;
-  transform: rotate(7deg);
-  color: #d6e9be;
-}
-.tag-two {
-  left: 20px;
-  bottom: 28px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  letter-spacing: 0.5px;
-  transform: rotate(-4deg);
 }
 .hero-utilities {
   position: absolute;
@@ -303,7 +223,7 @@ h1 {
   font-weight: 600;
 }
 .mode-tabs button.selected {
-  background: var(--lime);
+  background: var(--accent);
   color: #13243a;
   box-shadow: 0 3px 10px #0002;
 }
@@ -357,6 +277,8 @@ h1 {
 }
 .pool-badges {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: 6px;
   align-items: center;
   gap: 9px;
   min-width: 0;
@@ -393,6 +315,7 @@ h1 {
 }
 .daily-progress {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 6px;
 }
@@ -408,9 +331,9 @@ h1 {
   font-size: 12px;
 }
 .day-step.current {
-  border-color: var(--lime);
-  color: var(--lime);
-  background: #c5ed8310;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #8dbbff10;
 }
 .day-step.solved {
   background: var(--green);
@@ -468,8 +391,8 @@ h1 {
   box-shadow: 0 4px 14px #0001;
 }
 .search-input.focused {
-  border-color: var(--lime);
-  box-shadow: 0 0 0 3px #c5ed8325;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px #8dbbff25;
 }
 .search-input input {
   border: none;
@@ -620,7 +543,7 @@ h1 {
   background: #3c5169;
 }
 .attempt-dots .used {
-  background: var(--lime);
+  background: var(--accent);
 }
 .first-guess {
   margin: 0 26px;
@@ -662,7 +585,7 @@ h1 {
 }
 .empty-pitch:before,
 .empty-pitch:after {
-  content: '';
+  content: "";
   width: 14px;
   height: 32px;
   border: 1px solid #38506b;
@@ -688,7 +611,7 @@ h1 {
 }
 .empty-categories {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 6px;
   max-width: 650px;
   margin: 25px auto 0;
@@ -818,7 +741,7 @@ h1 {
 }
 .clue-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 7px;
 }
 .clue {
@@ -929,7 +852,7 @@ h1 {
   margin-left: auto;
   font-size: 28px;
   font-weight: 700;
-  color: var(--lime);
+  color: var(--accent);
   white-space: nowrap;
 }
 .result-message {
@@ -956,9 +879,9 @@ h1 {
   line-height: 1.4;
 }
 .primary {
-  background: var(--lime);
+  background: var(--accent);
   color: #13283c;
-  border: 1px solid var(--lime);
+  border: 1px solid var(--accent);
 }
 .primary:hover {
   background: #d8f6a7;
@@ -989,7 +912,7 @@ h1 {
   margin-bottom: 25px;
 }
 .aside-icon {
-  color: var(--lime);
+  color: var(--accent);
 }
 .aside-heading h2 {
   font-size: 17px;
@@ -1012,7 +935,7 @@ h1 {
   font-size: 12px;
   border: 1px solid #46594d;
   border-radius: 6px;
-  background: #c5ed830b;
+  background: #8dbbff0b;
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -1039,7 +962,7 @@ h1 {
   width: 100%;
 }
 .aside-link:hover {
-  color: var(--lime);
+  color: var(--accent);
 }
 .daily-card {
   background: linear-gradient(135deg, #20383c, #162c3e);
@@ -1107,7 +1030,7 @@ h1 {
 .daily-track span {
   height: 100%;
   display: block;
-  background: var(--lime);
+  background: var(--accent);
   transition: width 0.3s;
 }
 .records-card {
@@ -1160,7 +1083,7 @@ h1 {
   align-items: center;
 }
 .footer-wordmark > span:first-child {
-  color: var(--lime);
+  color: var(--accent);
   margin-left: -4px;
 }
 .footer-divider {
@@ -1176,7 +1099,7 @@ h1 {
   min-height: 44px;
 }
 .page-footer > a:hover {
-  color: var(--lime);
+  color: var(--accent);
 }
 .page-footer p {
   font-size: 12px;
@@ -1227,7 +1150,7 @@ h1 {
   margin-bottom: 24px;
 }
 .help-steps > li > span {
-  color: var(--lime);
+  color: var(--accent);
   font-size: 13px;
   padding-top: 3px;
   font-family: monospace;
@@ -1270,7 +1193,7 @@ h1 {
 .mode-explanation strong {
   font-size: 15px;
   font-weight: 600;
-  color: var(--lime);
+  color: var(--accent);
 }
 .mode-explanation p {
   font-size: 15px;
@@ -1302,7 +1225,7 @@ h1 {
 .stats-grid strong {
   font-size: 29px;
   font-weight: 700;
-  color: var(--lime);
+  color: var(--accent);
 }
 .stats-grid span {
   font-size: 12px;
@@ -1521,7 +1444,8 @@ h1 {
 }
 @media (max-width: 600px) {
   .app-shell {
-    padding: calc(23px + env(safe-area-inset-top)) 14px max(34px, env(safe-area-inset-bottom));
+    padding: calc(23px + env(safe-area-inset-top)) 14px
+      max(34px, env(safe-area-inset-bottom));
   }
   .hero {
     min-height: 235px;
@@ -1530,9 +1454,6 @@ h1 {
   }
   .hero-copy {
     width: 100%;
-  }
-  .hero-art {
-    display: none;
   }
   .hero-utilities {
     top: 0;
@@ -1689,7 +1610,7 @@ h1 {
   }
   .empty-categories {
     gap: 4px;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     max-width: 290px;
     margin: 23px auto 0;
   }
@@ -1731,7 +1652,7 @@ h1 {
   }
   .guess-row-title {
     gap: 6px;
-    min-width: 478px;
+    min-width: 410px;
   }
   .guess-row-title strong {
     font-size: 15px;
@@ -1743,7 +1664,7 @@ h1 {
     font-size: 12px;
   }
   .clue-grid {
-    min-width: 478px;
+    min-width: 410px;
     gap: 5px;
   }
   .clue {
