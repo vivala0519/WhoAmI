@@ -479,3 +479,191 @@ a:focus-visible {
     border-radius: 20px;
   }
 }
+
+/* Center the mobile layout while keeping controls and search results usable. */
+@media (max-width: 600px) {
+  .board-top {
+    justify-content: center;
+  }
+  .pool-badges {
+    justify-content: center;
+  }
+  .attempts-caption {
+    justify-content: center;
+    gap: 18px;
+  }
+  .search-input input {
+    text-align: center;
+  }
+  .guess-row-title {
+    min-width: 0;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .guess-row-title > div {
+    justify-content: center;
+  }
+  .clue-grid {
+    min-width: 0;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .board-footer {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .result-card {
+    text-align: center;
+  }
+  .result-player {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .result-score {
+    margin-left: 0;
+  }
+  .side-panel {
+    text-align: center;
+  }
+  .aside-heading,
+  .mini-step,
+  .aside-link,
+  .records-card {
+    justify-content: center;
+  }
+  .aside-link,
+  .records-card {
+    gap: 10px;
+  }
+  .daily-card-bottom {
+    justify-content: center;
+    gap: 32px;
+  }
+  .daily-card-bottom > div {
+    align-items: center;
+  }
+  .page-footer {
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+.daily-card-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+}
+.daily-card-row .daily-card {
+  flex: 1;
+  min-width: 0;
+}
+.records-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 92px;
+  width: 92px;
+  min-height: 48px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 8px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: var(--accent);
+  background: var(--panel);
+}
+.records-icon span {
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 600;
+  word-break: keep-all;
+}
+.records-icon:hover {
+  background: var(--surface-hover);
+}
+@media (max-width: 600px) {
+  .daily-card-row .daily-card-bottom {
+    gap: clamp(8px, 4vw, 24px);
+  }
+}
+
+.app-shell {
+  padding-bottom: max(100px, calc(env(safe-area-inset-bottom) + 80px));
+}
+.scroll-top {
+  position: fixed;
+  right: max(16px, calc(env(safe-area-inset-right) + 16px));
+  bottom: max(34px, calc(env(safe-area-inset-bottom) + 16px));
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: 0 6px 24px #101f3326;
+}
+.scroll-top:hover {
+  background: var(--surface-hover);
+}
+
+.hero-copy {
+  width: 100%;
+}
+.hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+.hero-top .eyebrow {
+  min-width: 0;
+  flex: 1;
+  max-width: none;
+  flex-wrap: nowrap;
+}
+.eyebrow-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hero-top .hero-utilities {
+  position: static;
+  flex: 0 0 auto;
+}
+@media (max-width: 640px) {
+  .hero {
+    padding-top: 12px;
+  }
+  .hero-top {
+    gap: 6px;
+  }
+  .hero-top .eyebrow {
+    gap: 5px;
+    letter-spacing: 0;
+  }
+  .hero-top .hero-utilities {
+    gap: 2px;
+  }
+}
+
+.avatar-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+}
+
+.search-result .avatar { width: 88px; height: 96px; border-radius: 12px; }
+.result-name { min-width: 0; }
+.result-player .avatar { width: 128px; height: 140px; border-radius: 16px; }
+@media (max-width: 600px) {
+  .search-result .avatar { width: 76px; height: 84px; }
+  .result-player .avatar { width: 112px; height: 124px; }
+}

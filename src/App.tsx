@@ -1,7 +1,9 @@
 import { useEffect, useId, useReducer, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Icon } from "./icons";
+import playerPhotos from "./player-photos.json";
 import { ParticleBall } from "./ParticleBall";
+import { useInterstitialAd } from "./useInterstitialAd";
 import {
   activeRound,
   categories,
@@ -66,15 +68,29 @@ function Kit({
   );
 }
 function PlayerAvatar({ player }: { player: Player }) {
+  const photo = (playerPhotos as Record<string, string>)[player.id];
+  const [failedPhoto, setFailedPhoto] = useState<string | null>(null);
   return (
     <span
       className="avatar"
       style={{ "--kit-color": player.color } as React.CSSProperties}
     >
-      <Kit
-        number={player.number === null ? "·" : String(player.number)}
-        color="currentColor"
-      />
+      {photo && failedPhoto !== photo ? (
+        <img
+          className="avatar-photo"
+          src={photo}
+          alt={player.name + " 선수 사진"}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setFailedPhoto(photo)}
+        />
+      ) : (
+        <Kit
+          number={player.number === null ? "·" : String(player.number)}
+          color="currentColor"
+        />
+      )}
     </span>
   );
 }
@@ -360,20 +376,19 @@ function HelpContent() {
           clue={{
             key: "value",
             label: "시장가치",
-            value: "약 746.18억 원",
+            value: "약 746억 원",
             match: "miss",
             direction: "up",
           }}
         />
       </div>
       <p className="example-caption">
-        예시: 프랑스 선수이자 미드필더이고, 시장가치는 약 746.18억 원보다
-        높아요.
+        예시: 프랑스 선수이자 미드필더이고, 시장가치는 약 746억 원보다 높아요.
       </p>
       <div className="mode-explanation">
-        <strong>오늘의 도전</strong>
+        <strong>오늘의 챌린지</strong>
         <p>
-          프리미어리그, 시장가치 약 44.77억 원 이상 선수 중 매일 1명. 한국 시간
+          프리미어리그, 시장가치 약 45억 원 이상 선수 중 매일 1명. 한국 시간
           자정에 새로운 문제가 열려요.
         </p>
         <strong>무제한 모드</strong>
@@ -387,6 +402,7 @@ function HelpContent() {
   );
 }
 export default function App() {
+  const interstitial = useInterstitialAd();
   const [theme, setTheme] = useState<"light" | "dark">(() =>
     document.documentElement.dataset.theme === "light" ? "light" : "dark",
   );
@@ -414,6 +430,13 @@ export default function App() {
     [toast, setToast] = useState(""),
     [tick, setTick] = useState(Date.now());
   const [copied, setCopied] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  useEffect(() => {
+    const update = () => setShowScrollTop(window.scrollY > 320);
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
+  }, []);
   const round = activeRound(state),
     answer = playerMap.get(round.answer)!,
     finished = round.status !== "playing",
@@ -471,8 +494,40 @@ export default function App() {
       <main className="page">
         <section className="hero" aria-labelledby="game-title">
           <div className="hero-copy">
-            <div className="eyebrow">
-              <span className="live-dot" /> FOOTBALL IDENTITY QUIZ{" "}
+            <div className="hero-top">
+              <div className="eyebrow">
+                <span className="live-dot" />
+                <span className="eyebrow-label">FOOTBALL IDENTITY QUIZ</span>
+              </div>
+              <div className="hero-utilities">
+                <button
+                  type="button"
+                  className="icon-button theme-toggle"
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  aria-label={
+                    theme === "dark" ? "밝은 테마로 전환" : "어두운 테마로 전환"
+                  }
+                  title={
+                    theme === "dark" ? "밝은 테마로 전환" : "어두운 테마로 전환"
+                  }
+                >
+                  <Icon name={theme === "dark" ? "sun" : "moon"} />
+                </button>
+                <button
+                  className="icon-button"
+                  onClick={() => setModal("stats")}
+                  aria-label="내 기록 보기"
+                >
+                  <Icon name="chart" />
+                </button>
+                <button
+                  className="icon-button"
+                  onClick={() => setModal("help")}
+                  aria-label="게임 방법 보기"
+                >
+                  <Icon name="help" />
+                </button>
+              </div>
             </div>
             <h1 id="game-title">
               WHO <span className="logo-am">AM</span> I
@@ -487,35 +542,6 @@ export default function App() {
           <div className="hero-art" aria-hidden="true">
             <ParticleBall theme={theme} />
           </div>
-          <div className="hero-utilities">
-            <button
-              type="button"
-              className="icon-button theme-toggle"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              aria-label={
-                theme === "dark" ? "밝은 테마로 전환" : "어두운 테마로 전환"
-              }
-              title={
-                theme === "dark" ? "밝은 테마로 전환" : "어두운 테마로 전환"
-              }
-            >
-              <Icon name={theme === "dark" ? "sun" : "moon"} />
-            </button>
-            <button
-              className="icon-button"
-              onClick={() => setModal("stats")}
-              aria-label="내 기록 보기"
-            >
-              <Icon name="chart" />
-            </button>
-            <button
-              className="icon-button"
-              onClick={() => setModal("help")}
-              aria-label="게임 방법 보기"
-            >
-              <Icon name="help" />
-            </button>
-          </div>
         </section>
         <div className="mode-bar">
           <div className="mode-tabs" role="tablist" aria-label="게임 모드">
@@ -528,7 +554,7 @@ export default function App() {
               onClick={() => selectMode("daily")}
             >
               <Icon name="calendar" />
-              오늘의 도전<span className="tab-count">{DAILY_COUNT}</span>
+              오늘의 챌린지<span className="tab-count">{DAILY_COUNT}</span>
             </button>
             <button
               id="unlimited-tab"
@@ -688,12 +714,16 @@ export default function App() {
                     <button
                       className="button primary"
                       onClick={() => {
+                        if (state.mode === "unlimited")
+                          interstitial.showIfReady();
                         dispatch({ type: "next" });
                         setCopied(false);
                       }}
                     >
                       {state.mode === "unlimited"
-                        ? "다음 선수 도전"
+                        ? interstitial.ready
+                          ? "다음 선수 도전 · 광고"
+                          : "다음 선수 도전"
                         : "다음 문제"}
                       <Icon name="chevron" />
                     </button>
@@ -827,85 +857,111 @@ export default function App() {
             </div>
           </section>
           <aside className="side-panel">
-            <section className="how-card">
-              <div className="aside-heading">
-                <span className="aside-icon">
-                  <Icon name="help" />
+            {/*<section className="how-card">*/}
+            {/*  <div className="aside-heading">*/}
+            {/*    <span className="aside-icon">*/}
+            {/*      <Icon name="help" />*/}
+            {/*    </span>*/}
+            {/*    <h2>이렇게 플레이해요</h2>*/}
+            {/*  </div>*/}
+            {/*  <div className="mini-step">*/}
+            {/*    <span>1</span>*/}
+            {/*    <div>*/}
+            {/*      <strong>선수를 떠올리세요</strong>*/}
+            {/*      <p>*/}
+            {/*        이름을 검색한 뒤<br />*/}
+            {/*        목록에서 선택하세요.*/}
+            {/*      </p>*/}
+            {/*    </div>*/}
+            {/*  </div>*/}
+            {/*  <div className="mini-step">*/}
+            {/*    <span>2</span>*/}
+            {/*    <div>*/}
+            {/*      <strong>6가지 단서를 읽으세요</strong>*/}
+            {/*      <p>*/}
+            {/*        색은 일치 여부를,*/}
+            {/*        <br />*/}
+            {/*        화살표는 방향을 알려줘요.*/}
+            {/*      </p>*/}
+            {/*    </div>*/}
+            {/*  </div>*/}
+            {/*  <div className="mini-step">*/}
+            {/*    <span>3</span>*/}
+            {/*    <div>*/}
+            {/*      <strong>8번 안에 맞혀보세요</strong>*/}
+            {/*      <p>*/}
+            {/*        단서를 조합하면*/}
+            {/*        <br />*/}
+            {/*        정답이 가까워져요.*/}
+            {/*      </p>*/}
+            {/*    </div>*/}
+            {/*  </div>*/}
+            {/*  <button className="aside-link" onClick={() => setModal("help")}>*/}
+            {/*    자세한 게임 방법*/}
+            {/*    <Icon name="chevron" width="17" height="17" />*/}
+            {/*  </button>*/}
+            {/*</section>*/}
+            <div className="daily-card-row">
+              <section className="daily-card">
+                <span className="section-kicker">
+                  EVERY DAY, A NEW CHALLENGE
                 </span>
-                <h2>이렇게 플레이해요</h2>
-              </div>
-              <div className="mini-step">
-                <span>1</span>
-                <div>
-                  <strong>선수를 떠올리세요</strong>
-                  <p>
-                    이름을 검색한 뒤<br />
-                    목록에서 선택하세요.
-                  </p>
+                <div className="daily-card-bottom">
+                  <div>
+                    <span>오늘의 진행</span>
+                    <strong>
+                      {done}
+                      <small> / {DAILY_COUNT}</small>
+                    </strong>
+                  </div>
+                  <div className="countdown">
+                    <span>다음 도전까지</span>
+                    <strong>{countdown}</strong>
+                  </div>
                 </div>
-              </div>
-              <div className="mini-step">
-                <span>2</span>
-                <div>
-                  <strong>6가지 단서를 읽으세요</strong>
-                  <p>
-                    색은 일치 여부를,
-                    <br />
-                    화살표는 방향을 알려줘요.
-                  </p>
+                <div className="daily-track">
+                  <span style={{ width: `${(done / DAILY_COUNT) * 100}%` }} />
                 </div>
-              </div>
-              <div className="mini-step">
-                <span>3</span>
-                <div>
-                  <strong>8번 안에 맞혀보세요</strong>
-                  <p>
-                    단서를 조합하면
-                    <br />
-                    정답이 가까워져요.
-                  </p>
-                </div>
-              </div>
-              <button className="aside-link" onClick={() => setModal("help")}>
-                자세한 게임 방법
-                <Icon name="chevron" width="17" height="17" />
-              </button>
-            </section>
-            <section className="daily-card">
-              <span className="section-kicker">EVERY DAY, A NEW CHALLENGE</span>
-              <div className="daily-card-bottom">
-                <div>
-                  <span>오늘의 진행</span>
-                  <strong>
-                    {done}
-                    <small> / {DAILY_COUNT}</small>
-                  </strong>
-                </div>
-                <div className="countdown">
-                  <span>다음 도전까지</span>
-                  <strong>{countdown}</strong>
-                </div>
-              </div>
-              <div className="daily-track">
-                <span style={{ width: `${(done / DAILY_COUNT) * 100}%` }} />
-              </div>
-            </section>
-            <button className="records-card" onClick={() => setModal("stats")}>
-              <span>
+              </section>
+              <button
+                type="button"
+                className="records-icon"
+                aria-label="나의 스카우팅 기록 보기"
+                title="스카우팅 기록"
+                onClick={() => setModal("stats")}
+              >
                 <Icon name="chart" />
-                <strong>나의 스카우팅 기록</strong>
-              </span>
-              <Icon name="chevron" />
-            </button>
+                <span>스카우팅 기록</span>
+              </button>
+            </div>
           </aside>
         </div>
-        <footer className="page-footer">
-          <div className="footer-wordmark">
-            WHO AM I<span>?</span>
-          </div>
-          <p>6가지 단서. 8번의 기회. 당신의 축구 지식.</p>
-        </footer>
+        {/*<footer className="page-footer">*/}
+        {/*  <div className="footer-wordmark">*/}
+        {/*    WHO AM I<span>?</span>*/}
+        {/*  </div>*/}
+        {/*  <p>6가지 단서. 8번의 기회. 당신의 축구 지식.</p>*/}
+        {/*</footer>*/}
       </main>
+      {showScrollTop && !modal && !toast && (
+        <button
+          type="button"
+          className="scroll-top"
+          aria-label="맨 위로 이동"
+          title="맨 위로 이동"
+          onClick={() =>
+            window.scrollTo({
+              top: 0,
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+                .matches
+                ? "auto"
+                : "smooth",
+            })
+          }
+        >
+          <Icon name="arrow" />
+        </button>
+      )}
       {toast && (
         <div className="toast" role="status">
           <Icon name="check" />
@@ -1006,7 +1062,7 @@ export default function App() {
                 </p>
               )}
               <p className="data-note">
-                오늘의 도전과 무제한 기록을 합산해요. 정답 공개는 미해결로
+                오늘의 챌린지와 무제한 기록을 합산해요. 정답 공개는 미해결로
                 기록돼요.
               </p>
             </>

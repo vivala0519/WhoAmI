@@ -2,9 +2,7 @@
 @theme {
   --color-navy: #061b38;
   --color-brand: #8dbbff;
-  --font-sans:
-    "Segoe UI", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
-    "Malgun Gothic", sans-serif;
+  --font-sans: 'DNFForgedBlade', sans-serif;
 }
 :root {
   font-family: var(--font-sans);
@@ -132,7 +130,7 @@ button:active {
   color: var(--accent);
 }
 h1 {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-sans);
   font-size: 82px;
   letter-spacing: -3.8px;
   font-weight: 700;
@@ -719,7 +717,7 @@ h1 {
   min-width: 0;
 }
 .guess-order {
-  font-family: monospace;
+  font-family: var(--font-sans);
   color: #829bb5;
   font-size: 12px;
 }
@@ -1012,7 +1010,7 @@ h1 {
   font-weight: 400;
 }
 .daily-card-bottom .countdown strong {
-  font-family: monospace;
+  font-family: var(--font-sans);
   font-size: 19px;
   color: #d4e6ba;
   letter-spacing: 0.2px;
@@ -1153,7 +1151,7 @@ h1 {
   color: var(--accent);
   font-size: 13px;
   padding-top: 3px;
-  font-family: monospace;
+  font-family: var(--font-sans);
 }
 .help-steps strong {
   font-size: 16px;
@@ -1271,7 +1269,7 @@ h1 {
   background: #061a33;
   color: #dae7f5;
   padding: 15px;
-  font-family: monospace;
+  font-family: var(--font-sans);
   font-size: 15px;
   margin-top: 20px;
   resize: vertical;
@@ -1682,6 +1680,7 @@ h1 {
     display: flex;
     gap: 15px;
     margin-top: 2px;
+    align-items: center;
   }
   .how-card {
     padding-top: 21px;
@@ -1808,7 +1807,7 @@ h1 {
 }
 
 .clue .entity-code {
-  font-family: Arial, sans-serif;
+  font-family: var(--font-sans);
   letter-spacing: 0.2px;
   font-size: 18px;
   white-space: nowrap;
@@ -1833,3 +1832,8 @@ h1 {
     padding-inline: 8px;
   }
 }
+
+@font-face { font-family: 'Giants'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2307-1@1.1/Giants-Bold.woff2') format('woff2'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'DNFForgedBlade'; src: url('https://cdn.df.nexon.com/img/common/font/DNFForgedBlade-Medium.otf') format('opentype'); font-weight: 400 600; font-display: swap; }
+@font-face { font-family: 'DNFForgedBlade'; src: url('https://cdn.df.nexon.com/img/common/font/DNFForgedBlade-Bold.otf') format('opentype'); font-weight: 700; font-display: swap; }
+/*#game-title { font-family: 'Giants', sans-serif; }*/

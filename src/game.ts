@@ -105,7 +105,7 @@ export function activeRound(s: GameState) {
   return s.mode === "daily" ? s.daily[s.active] : s.unlimited;
 }
 export function money(value: number) {
-  return `약 ${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 2 }).format((value * 1492.35) / 100_000_000)}억 원`;
+  return `약 ${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 }).format((value * 1492.35) / 100_000_000)}억 원`;
 }
 export function compare(guess: Player, answer: Player): Clue[] {
   const text = (
@@ -338,7 +338,7 @@ export function shareText(state: GameState) {
     answer = playerMap.get(r.answer)!,
     marks = { exact: "🟩", near: "🟨", miss: "🟥" };
   return [
-    `WHO AM I? · ${state.mode === "daily" ? `${state.date} 오늘의 도전` : "무제한 모드"}`,
+    `WHO AM I? · ${state.mode === "daily" ? `${state.date} 오늘의 챌린지` : "무제한 모드"}`,
     `${r.status === "won" ? r.guesses.length : "X"}/8`,
     ...r.guesses.map((id) =>
       compare(playerMap.get(id)!, answer)
