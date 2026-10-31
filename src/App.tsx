@@ -206,7 +206,7 @@ function Search({
           placeholder={
             guesses.length
               ? "다음으로 떠오르는 선수는?"
-              : "선수 이름을 입력해 첫 추측을 시작하세요"
+              : "선수 이름을 입력하세요"
           }
           value={query}
           onChange={(e) => {
@@ -686,12 +686,12 @@ export default function App() {
                   ? round.status === "won"
                     ? "정답을 찾았어요!"
                     : "정답을 확인해 보세요"
-                  : "어떤 선수를 찾고 있을까요?"}
+                  : "어떤 선수일까요?"}
               </h2>
               <p>
                 {finished
                   ? "단서를 연결한 당신의 추측을 돌아보세요."
-                  : "이름을 검색하고, 단서를 모아 정답에 가까워져 보세요."}
+                  : "단서를 모아 정답에 가까워져 보세요."}
               </p>
             </div>
             {!finished && (

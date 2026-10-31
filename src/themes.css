@@ -660,10 +660,99 @@ a:focus-visible {
   object-position: center 25%;
 }
 
-.search-result .avatar { width: 88px; height: 96px; border-radius: 12px; }
-.result-name { min-width: 0; }
-.result-player .avatar { width: 128px; height: 140px; border-radius: 16px; }
+.search-result .avatar {
+  width: 88px;
+  height: 96px;
+  border-radius: 12px;
+}
+.result-name {
+  min-width: 0;
+}
+.result-player .avatar {
+  width: 128px;
+  height: 140px;
+  border-radius: 16px;
+}
 @media (max-width: 600px) {
-  .search-result .avatar { width: 76px; height: 84px; }
-  .result-player .avatar { width: 112px; height: 124px; }
+  .search-result .avatar {
+    width: 76px;
+    height: 84px;
+  }
+  .result-player .avatar {
+    width: 112px;
+    height: 124px;
+  }
+}
+
+/* Azure search field with a gentle travelling highlight in dark mode. */
+[data-theme="dark"] .search-input {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: azure;
+  border-color: #b8e2ef;
+  color: #365369;
+}
+[data-theme="dark"] .search-input::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+  top: -50%;
+  bottom: -50%;
+  left: 0;
+  width: 42%;
+  background: linear-gradient(
+    105deg,
+    transparent,
+    #a5e8ff44 24%,
+    #ffffffee 50%,
+    #b4eaff55 76%,
+    transparent
+  );
+  transform: translateX(-160%) skewX(-18deg);
+  animation: azure-search-shimmer 5s ease-in-out infinite;
+}
+[data-theme="dark"] .search-input > * {
+  position: relative;
+  z-index: 1;
+}
+[data-theme="dark"] .search-input input {
+  color: #19354b;
+}
+[data-theme="dark"] .search-input input::placeholder {
+  color: #526b7b;
+}
+[data-theme="dark"] .search-input :is(.search-key, .clear-search) {
+  color: #526b7b;
+  border-color: #b8d1da;
+}
+[data-theme="dark"] .search-input .clear-search:hover {
+  background: #d7edf4;
+  color: #19354b;
+}
+@keyframes azure-search-shimmer {
+  0%,
+  15% {
+    transform: translateX(-160%) skewX(-18deg);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  65% {
+    transform: translateX(370%) skewX(-18deg);
+    opacity: 1;
+  }
+  75%,
+  100% {
+    transform: translateX(370%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="dark"] .search-input::before {
+    animation: none;
+    opacity: 0;
+  }
 }
