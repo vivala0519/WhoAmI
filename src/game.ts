@@ -431,7 +431,8 @@ export function restore(raw: string | null, date = dayKey()): GameState {
   }
 }
 export function shareText(state: GameState) {
-  const [year, month, day] = state.date.split("-");
+  const averageAttempts = averageWinningAttempts(state.stats);
+  const [, month, day] = state.date.split("-");
   const r = activeRound(state),
     answer = playerMap.get(r.answer)!,
     marks = { exact: "🟩", near: "🟨", miss: "🟥" };
@@ -444,6 +445,10 @@ export function shareText(state: GameState) {
         .map((c) => marks[c.match])
         .join(""),
     ),
+    `누적 플레이: ${state.stats.played}회`,
+    `승률: ${state.stats.played ? `${Math.round((state.stats.won / state.stats.played) * 100)}%` : "—"}`,
+    `평균 시도 횟수: ${averageAttempts === null ? "—" : `${averageAttempts.toFixed(1)}회`}`,
+    `현재 연승: ${state.stats.streak}연승`,
     "",
     "나도 풀러 가기",
     "https://tossminiapp.com/s/p42d6aeg",
