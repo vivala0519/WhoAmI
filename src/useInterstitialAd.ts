@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   loadFullScreenAd,
   showFullScreenAd,
@@ -91,5 +91,6 @@ export function useInterstitialAd() {
     };
   }, []);
 
-  return { ready, showIfReady: () => showRef.current() };
+  const showIfReady = useCallback(() => showRef.current(), []);
+  return { ready, showIfReady };
 }

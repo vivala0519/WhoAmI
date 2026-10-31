@@ -345,5 +345,6 @@ export function shareText(state: GameState) {
         .map((c) => marks[c.match])
         .join(""),
     ),
+    '나도 풀러 가기 https://tossminiapp.com/s/p42d6aeg',
   ].join("\n");
 }

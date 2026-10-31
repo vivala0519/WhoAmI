@@ -400,7 +400,7 @@ h1 {
   flex: 1;
   min-width: 0;
   height: 48px;
-  font-size: 15px;
+  font-size: 16px;
 }
 .search-input input::placeholder {
   color: #65758a;
@@ -1564,10 +1564,10 @@ h1 {
     gap: 9px;
   }
   .search-input input {
-    font-size: 15px;
+    font-size: 16px;
   }
   .search-input input::placeholder {
-    font-size: 13px;
+    font-size: 16px;
   }
   .search-key {
     display: none;
