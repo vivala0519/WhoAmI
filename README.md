@@ -11,7 +11,6 @@ npm run dev
 개발 주소: http://127.0.0.1:5175
 
 ```powershell
-npm test       # 비교 규칙, 5회 제한, 진행 복원, 모드 분리, 자정 갱신
 npm run build # TypeScript 검사 + 배포용 dist 생성
 npm run preview
 ```

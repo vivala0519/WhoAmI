@@ -738,9 +738,6 @@ export default function App() {
                       ? "정답 공개로 이번 도전을 마쳤어요."
                       : `${attemptLimit}번의 기회를 모두 사용했어요. 다음 선수에게 도전해 보세요.`}
                 </p>
-                {attemptLimit > MAX_ATTEMPTS && (
-                  <p className="result-message">이전 8회 규칙의 기록이에요.</p>
-                )}
                 <div className="result-buttons">
                   <button className="button secondary" onClick={share}>
                     <Icon name={copied ? "check" : "share"} />
@@ -1089,17 +1086,6 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              {state.stats.distribution
-                .slice(MAX_ATTEMPTS)
-                .some((n) => n > 0) && (
-                <p className="modal-intro">
-                  이전 8회 규칙에서 6~8회 만에 맞힌 기록:{" "}
-                  {state.stats.distribution
-                    .slice(MAX_ATTEMPTS)
-                    .reduce((sum, n) => sum + n, 0)}
-                  회
-                </p>
-              )}
               <h3 className="distribution-title">몇 번 만에 맞혔나요?</h3>
               <div className="distribution">
                 {state.stats.distribution.slice(0, MAX_ATTEMPTS).map((n, i) => (
@@ -1119,16 +1105,6 @@ export default function App() {
               {!state.stats.played && (
                 <p className="example-caption">
                   첫 번째 오늘의 챌린지를 완료하면 기록이 쌓여요.
-                </p>
-              )}
-              <p className="data-note stats-note">
-                오늘의 챌린지만 집계해요. 평균 시도 횟수는 성공한 챌린지만
-                기준으로 계산해요.
-              </p>
-              {state.legacyStats && (
-                <p className="data-note stats-note">
-                  과거 합산 기록은 모드를 분리할 수 없어 제외했어요. 확인 가능한
-                  마지막 오늘의 챌린지 기록부터 반영해요.
                 </p>
               )}
             </>
