@@ -1,4 +1,5 @@
 import dataset from "./players.json";
+import dailySchedule from "./daily-schedule.json";
 export type Player = (typeof dataset.players)[number];
 export type Mode = "daily" | "unlimited";
 export type Status = "playing" | "won" | "lost" | "revealed";
@@ -14,11 +15,13 @@ export interface Clue {
   direction?: "up" | "down";
 }
 export interface Round {
+  maxAttempts?: number;
   answer: string;
   guesses: string[];
   status: Status;
 }
 export interface Stats {
+  totalAttempts: number;
   played: number;
   won: number;
   streak: number;
@@ -26,15 +29,16 @@ export interface Stats {
   distribution: number[];
 }
 export interface GameState {
-  version: 1;
+  version: 3;
   date: string;
   mode: Mode;
   daily: Round[];
   active: number;
   unlimited: Round;
   stats: Stats;
+  legacyStats?: Omit<Stats, "totalAttempts">;
 }
-export const MAX_ATTEMPTS = 8;
+export const MAX_ATTEMPTS = 5;
 export const DAILY_COUNT = 1;
 export const players = dataset.players;
 export const playerMap = new Map(players.map((p) => [p.id, p]));
@@ -58,23 +62,21 @@ export function dayKey(date = new Date()) {
   const get = (type: string) => parts.find((p) => p.type === type)!.value;
   return `${get("year")}-${get("month")}-${get("day")}`;
 }
-export function hash(text: string) {
-  let h = 2166136261;
-  for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-  return h >>> 0;
-}
+// Keep the published schedule stable across visits and player-data updates.
+export const DAILY_SCHEDULE_START = dailySchedule.startDate;
+const dailyScheduleStart = Date.parse(DAILY_SCHEDULE_START + "T00:00:00Z");
 export function dailyAnswers(date: string) {
-  const ids = [...pools.daily];
-  let seed = hash(`who-am-i-ko:${DATA_VERSION}:${date}`);
-  for (let i = ids.length - 1; i > 0; i--) {
-    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
-    const j = seed % (i + 1);
-    [ids[i], ids[j]] = [ids[j], ids[i]];
-  }
-  return ids.slice(0, DAILY_COUNT);
+  const timestamp = Date.parse(date + "T00:00:00Z");
+  if (!Number.isFinite(timestamp))
+    throw new Error("Invalid daily challenge date");
+  const dayOffset = Math.floor((timestamp - dailyScheduleStart) / 86_400_000);
+  const size = dailySchedule.players.length;
+  const index = ((dayOffset % size) + size) % size;
+  return [dailySchedule.players[index]];
 }
 export const makeRound = (answer: string): Round => ({
   answer,
+  maxAttempts: MAX_ATTEMPTS,
   guesses: [],
   status: "playing",
 });
@@ -84,25 +86,65 @@ export function randomAnswer(exclude?: string) {
   crypto.getRandomValues(values);
   return pool[values[0] % pool.length];
 }
+function emptyStats(): Stats {
+  return {
+    totalAttempts: 0,
+    played: 0,
+    won: 0,
+    streak: 0,
+    best: 0,
+    distribution: Array(MAX_ATTEMPTS).fill(0),
+  };
+}
+function recordDailyResult(
+  stats: Stats,
+  round: Round,
+  attempts = round.guesses.length,
+): Stats {
+  if (round.status === "playing") return stats;
+  const won = round.status === "won";
+  const streak = won ? stats.streak + 1 : 0;
+  const distribution = Array.from(
+    {
+      length: Math.max(
+        stats.distribution.length,
+        round.maxAttempts ?? MAX_ATTEMPTS,
+      ),
+    },
+    (_, i) => stats.distribution[i] ?? 0,
+  );
+  if (won) distribution[round.guesses.length - 1]++;
+  return {
+    totalAttempts: stats.totalAttempts + attempts,
+    played: stats.played + 1,
+    won: stats.won + Number(won),
+    streak,
+    best: Math.max(streak, stats.best),
+    distribution,
+  };
+}
 export function initialState(date = dayKey()): GameState {
   return {
-    version: 1,
+    version: 3,
     date,
     mode: "daily",
     daily: dailyAnswers(date).map(makeRound),
     active: 0,
     unlimited: makeRound(randomAnswer()),
-    stats: {
-      played: 0,
-      won: 0,
-      streak: 0,
-      best: 0,
-      distribution: Array(8).fill(0),
-    },
+    stats: emptyStats(),
   };
 }
 export function activeRound(s: GameState) {
   return s.mode === "daily" ? s.daily[s.active] : s.unlimited;
+}
+export function averageWinningAttempts(stats: Stats): number | null {
+  if (!stats.won) return null;
+  return (
+    stats.distribution.reduce(
+      (sum, count, index) => sum + count * (index + 1),
+      0,
+    ) / stats.won
+  );
 }
 export function money(value: number) {
   return `약 ${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 }).format((value * 1492.35) / 100_000_000)}억 원`;
@@ -264,20 +306,10 @@ export function reducer(state: GameState, action: Action): GameState {
             : "playing",
     };
   } else return state;
-  let stats = state.stats;
-  if (round.status !== "playing") {
-    const won = round.status === "won",
-      streak = won ? stats.streak + 1 : 0,
-      distribution = [...stats.distribution];
-    if (won) distribution[round.guesses.length - 1]++;
-    stats = {
-      played: stats.played + 1,
-      won: stats.won + Number(won),
-      streak,
-      best: Math.max(streak, stats.best),
-      distribution,
-    };
-  }
+  const stats =
+    state.mode === "daily"
+      ? recordDailyResult(state.stats, round)
+      : state.stats;
   return state.mode === "daily"
     ? {
         ...state,
@@ -290,61 +322,130 @@ export function restore(raw: string | null, date = dayKey()): GameState {
   const fresh = () => initialState(date);
   try {
     if (!raw) return fresh();
-    const s = JSON.parse(raw) as GameState;
-    const validRound = (r: Round, mode: Mode) =>
-      r &&
-      pools[mode].includes(r.answer) &&
-      Array.isArray(r.guesses) &&
-      r.guesses.length <= 8 &&
-      new Set(r.guesses).size === r.guesses.length &&
-      r.guesses.every((id) => pools[mode].includes(id)) &&
-      ["playing", "won", "lost", "revealed"].includes(r.status) &&
-      (r.status !== "won" || r.guesses.at(-1) === r.answer) &&
-      (r.status !== "playing" ||
-        (r.guesses.length < 8 && !r.guesses.includes(r.answer)));
+    const s = JSON.parse(raw) as Omit<GameState, "version"> & {
+      version: number;
+    };
+    const legacyRules = s.version === 1;
+    const mixedStats = s.version < 3;
+    const validRound = (r: Round, mode: Mode) => {
+      const limit = legacyRules ? 8 : (r?.maxAttempts ?? MAX_ATTEMPTS);
+      return (
+        r &&
+        [MAX_ATTEMPTS, 8].includes(limit) &&
+        (legacyRules || limit === MAX_ATTEMPTS || r.status !== "playing") &&
+        pools[mode].includes(r.answer) &&
+        Array.isArray(r.guesses) &&
+        r.guesses.length <= limit &&
+        new Set(r.guesses).size === r.guesses.length &&
+        r.guesses.every((id) => pools[mode].includes(id)) &&
+        ["playing", "won", "lost", "revealed"].includes(r.status) &&
+        (r.status !== "won" || r.guesses.at(-1) === r.answer) &&
+        (r.status !== "playing" ||
+          (r.guesses.length < limit && !r.guesses.includes(r.answer)))
+      );
+    };
+    const validStats = (stats: Omit<Stats, "totalAttempts">) =>
+      stats &&
+      Array.isArray(stats.distribution) &&
+      [MAX_ATTEMPTS, 8].includes(stats.distribution.length) &&
+      [
+        stats.played,
+        stats.won,
+        stats.streak,
+        stats.best,
+        ...stats.distribution,
+      ].every((n) => Number.isInteger(n) && n >= 0) &&
+      stats.won <= stats.played;
     if (
-      s.version !== 1 ||
+      ![1, 2, 3].includes(s.version) ||
       !["daily", "unlimited"].includes(s.mode) ||
       !/^\d{4}-\d{2}-\d{2}$/.test(s.date) ||
       !Array.isArray(s.daily) ||
-      ![DAILY_COUNT, 3].includes(s.daily.length) ||
+      !(mixedStats ? [DAILY_COUNT, 3] : [DAILY_COUNT]).includes(
+        s.daily.length,
+      ) ||
       !s.daily.every((r) => validRound(r, "daily")) ||
       !validRound(s.unlimited, "unlimited") ||
       !Number.isInteger(s.active) ||
       s.active < 0 ||
       s.active >= s.daily.length ||
-      !s.stats ||
-      !Array.isArray(s.stats.distribution) ||
-      s.stats.distribution.length !== 8 ||
-      [
-        s.stats.played,
-        s.stats.won,
-        s.stats.streak,
-        s.stats.best,
-        ...s.stats.distribution,
-      ].some((n) => !Number.isInteger(n) || n < 0) ||
-      s.stats.won > s.stats.played
+      !validStats(s.stats) ||
+      (!mixedStats &&
+        (!Number.isInteger(s.stats.totalAttempts) ||
+          s.stats.totalAttempts < 0)) ||
+      (s.legacyStats !== undefined && !validStats(s.legacyStats))
     )
       return fresh();
-    // Keep the original first daily puzzle when migrating three-puzzle saves.
-    const migrated = { ...s, daily: s.daily.slice(0, DAILY_COUNT), active: 0 };
-    return reducer(migrated, { type: "day", date });
+    const normalizeRound = (round: Round): Round => {
+      if (round.status !== "playing")
+        return {
+          ...round,
+          maxAttempts: legacyRules ? 8 : (round.maxAttempts ?? MAX_ATTEMPTS),
+        };
+      if (round.guesses.length >= MAX_ATTEMPTS)
+        return {
+          ...round,
+          guesses: round.guesses.slice(0, MAX_ATTEMPTS),
+          maxAttempts: MAX_ATTEMPTS,
+          status: "lost",
+        };
+      return { ...round, maxAttempts: MAX_ATTEMPTS };
+    };
+    const daily =
+      s.date === date
+        ? s.daily.slice(0, DAILY_COUNT).map(normalizeRound)
+        : dailyAnswers(date).map(makeRound);
+    const unlimited = normalizeRound(s.unlimited);
+    let stats = { ...s.stats, distribution: [...s.stats.distribution] };
+    if (mixedStats) {
+      // Mixed historical counters cannot be split by mode. Recover only the
+      // saved first daily result, whose mode and actual guess count are known.
+      const savedDaily = s.date === date ? daily[0] : s.daily[0];
+      stats = emptyStats();
+      if (savedDaily.status !== "playing")
+        stats = recordDailyResult(
+          stats,
+          normalizeRound(savedDaily),
+          s.daily[0].guesses.length,
+        );
+    }
+    return {
+      ...s,
+      version: 3,
+      date,
+      active: 0,
+      daily,
+      unlimited,
+      stats,
+      ...(mixedStats
+        ? {
+            legacyStats: {
+              ...s.stats,
+              distribution: [...s.stats.distribution],
+            },
+          }
+        : {}),
+    };
   } catch {
     return fresh();
   }
 }
 export function shareText(state: GameState) {
+  const [year, month, day] = state.date.split("-");
   const r = activeRound(state),
     answer = playerMap.get(r.answer)!,
     marks = { exact: "🟩", near: "🟨", miss: "🟥" };
   return [
-    `WHO AM I? · ${state.mode === "daily" ? `${state.date} 오늘의 챌린지` : "무제한 모드"}`,
-    `${r.status === "won" ? r.guesses.length : "X"}/8`,
+    "Who am I?",
+    `${state.mode === "daily" ? `${month}월 ${day}일 오늘의 챌린지 ${r.status === "won" ? "성공!" : "실패!"}` : "무제한 모드"}`,
+    "",
     ...r.guesses.map((id) =>
       compare(playerMap.get(id)!, answer)
         .map((c) => marks[c.match])
         .join(""),
     ),
-    '나도 풀러 가기 https://tossminiapp.com/s/p42d6aeg',
+    "",
+    "나도 풀러 가기",
+    "https://tossminiapp.com/s/p42d6aeg",
   ].join("\n");
 }

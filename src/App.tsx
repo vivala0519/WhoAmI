@@ -6,6 +6,7 @@ import { ParticleBall } from "./ParticleBall";
 import { useInterstitialAd } from "./useInterstitialAd";
 import {
   activeRound,
+  averageWinningAttempts,
   categories,
   compare,
   DATA_VERSION,
@@ -308,7 +309,7 @@ function HelpContent() {
   return (
     <>
       <p className="modal-intro">
-        6가지 단서를 따라, 8번 안에 축구 선수의 정체를 맞혀보세요.
+        6가지 단서를 따라, 5번 안에 축구 선수의 정체를 맞혀보세요.
       </p>
       <ol className="help-steps">
         <li>
@@ -471,6 +472,8 @@ export default function App() {
   const round = activeRound(state),
     answer = playerMap.get(round.answer)!,
     finished = round.status !== "playing",
+    attemptLimit = round.maxAttempts ?? MAX_ATTEMPTS,
+    averageAttempts = averageWinningAttempts(state.stats),
     done = state.daily.filter((r) => r.status !== "playing").length;
   useEffect(() => {
     try {
@@ -567,7 +570,7 @@ export default function App() {
             <p className="hero-korean">이 선수, 누구일까요?</p>
             <p className="hero-description">
               당신의 축구 지식에 도전하세요.
-              <br className="mobile-break" /> 6가지 단서, 단 8번의 기회.
+              <br className="mobile-break" /> 6가지 단서, 단 5번의 기회.
             </p>
           </div>
           <div className="hero-art" aria-hidden="true">
@@ -724,8 +727,8 @@ export default function App() {
                   </div>
                   <span className="result-score">
                     {round.status === "won"
-                      ? `${round.guesses.length}/8`
-                      : "X/8"}
+                      ? `${round.guesses.length}/${attemptLimit}`
+                      : `X/${attemptLimit}`}
                   </span>
                 </div>
                 <p className="result-message">
@@ -733,8 +736,11 @@ export default function App() {
                     ? `${round.guesses.length}번 만에 선수를 맞혔어요.`
                     : round.status === "revealed"
                       ? "정답 공개로 이번 도전을 마쳤어요."
-                      : "8번의 기회를 모두 사용했어요. 다음 선수에게 도전해 보세요."}
+                      : `${attemptLimit}번의 기회를 모두 사용했어요. 다음 선수에게 도전해 보세요.`}
                 </p>
+                {attemptLimit > MAX_ATTEMPTS && (
+                  <p className="result-message">이전 8회 규칙의 기록이에요.</p>
+                )}
                 <div className="result-buttons">
                   <button className="button secondary" onClick={share}>
                     <Icon name={copied ? "check" : "share"} />
@@ -775,13 +781,14 @@ export default function App() {
                 <span className="attempt-number">
                   {String(round.guesses.length).padStart(2, "0")}
                 </span>{" "}
-                / 08 <span className="attempt-label">시도</span>
+                / {String(attemptLimit).padStart(2, "0")}{" "}
+                <span className="attempt-label">시도</span>
               </span>
               <div
                 className="attempt-dots"
-                aria-label={`${8 - round.guesses.length}번의 기회 남음`}
+                aria-label={`${Math.max(0, attemptLimit - round.guesses.length)}번의 기회 남음`}
               >
-                {Array.from({ length: 8 }, (_, i) => (
+                {Array.from({ length: attemptLimit }, (_, i) => (
                   <i
                     key={i}
                     className={i < round.guesses.length ? "used" : ""}
@@ -919,7 +926,7 @@ export default function App() {
             {/*  <div className="mini-step">*/}
             {/*    <span>3</span>*/}
             {/*    <div>*/}
-            {/*      <strong>8번 안에 맞혀보세요</strong>*/}
+            {/*      <strong>5번 안에 맞혀보세요</strong>*/}
             {/*      <p>*/}
             {/*        단서를 조합하면*/}
             {/*        <br />*/}
@@ -971,7 +978,7 @@ export default function App() {
         {/*  <div className="footer-wordmark">*/}
         {/*    WHO AM I<span>?</span>*/}
         {/*  </div>*/}
-        {/*  <p>6가지 단서. 8번의 기회. 당신의 축구 지식.</p>*/}
+        {/*  <p>6가지 단서. 5번의 기회. 당신의 축구 지식.</p>*/}
         {/*</footer>*/}
       </main>
       {showScrollTop && !modal && !toast && (
@@ -1060,26 +1067,48 @@ export default function App() {
                     state.stats.played
                       ? `${Math.round((state.stats.won / state.stats.played) * 100)}%`
                       : "—",
-                    "정답률",
+                    "승률",
                   ],
-                  [state.stats.streak, "현재 연속 정답"],
-                  [state.stats.best, "최고 연속 정답"],
+                  [
+                    averageAttempts === null
+                      ? "—"
+                      : `${averageAttempts.toFixed(1)}회`,
+                    "평균 시도 횟수",
+                  ],
+                  [state.stats.streak, "현재 연승"],
+                  [state.stats.best, "최고 연승"],
                 ].map(([v, label]) => (
-                  <div key={label}>
+                  <div
+                    key={label}
+                    className={
+                      label === "평균 시도 횟수" ? "stats-average" : undefined
+                    }
+                  >
                     <strong>{v}</strong>
                     <span>{label}</span>
                   </div>
                 ))}
               </div>
+              {state.stats.distribution
+                .slice(MAX_ATTEMPTS)
+                .some((n) => n > 0) && (
+                <p className="modal-intro">
+                  이전 8회 규칙에서 6~8회 만에 맞힌 기록:{" "}
+                  {state.stats.distribution
+                    .slice(MAX_ATTEMPTS)
+                    .reduce((sum, n) => sum + n, 0)}
+                  회
+                </p>
+              )}
               <h3 className="distribution-title">몇 번 만에 맞혔나요?</h3>
               <div className="distribution">
-                {state.stats.distribution.map((n, i) => (
+                {state.stats.distribution.slice(0, MAX_ATTEMPTS).map((n, i) => (
                   <div key={i}>
                     <span>{i + 1}</span>
                     <div
                       className="distribution-bar"
                       style={{
-                        width: `${Math.max(7, (n / Math.max(1, ...state.stats.distribution)) * 100)}%`,
+                        width: `${Math.max(7, (n / Math.max(1, ...state.stats.distribution.slice(0, MAX_ATTEMPTS))) * 100)}%`,
                       }}
                     >
                       {n}
@@ -1089,13 +1118,19 @@ export default function App() {
               </div>
               {!state.stats.played && (
                 <p className="example-caption">
-                  첫 번째 도전을 완료하면 기록이 쌓여요.
+                  첫 번째 오늘의 챌린지를 완료하면 기록이 쌓여요.
                 </p>
               )}
-              <p className="data-note">
-                오늘의 챌린지와 무제한 기록을 합산해요. 정답 공개는 미해결로
-                기록돼요.
+              <p className="data-note stats-note">
+                오늘의 챌린지만 집계해요. 평균 시도 횟수는 성공한 챌린지만
+                기준으로 계산해요.
               </p>
+              {state.legacyStats && (
+                <p className="data-note stats-note">
+                  과거 합산 기록은 모드를 분리할 수 없어 제외했어요. 확인 가능한
+                  마지막 오늘의 챌린지 기록부터 반영해요.
+                </p>
+              )}
             </>
           )}
         </Modal>
