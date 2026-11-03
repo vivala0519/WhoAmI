@@ -5,7 +5,7 @@ export type Mode = "daily" | "unlimited";
 export type Status = "playing" | "rewardOffer" | "won" | "lost" | "revealed";
 export type Match = "exact" | "near" | "miss";
 export type Category =
-  "country" | "club" | "position" | "birthYear" | "number" | "value";
+  "country" | "league" | "club" | "position" | "birthYear" | "number" | "value";
 export interface Clue {
   key: Category;
   label: string;
@@ -55,6 +55,11 @@ export const categories = [
   "등번호",
   "시장가치",
 ];
+export function categoriesForMode(mode: Mode) {
+  return mode === "unlimited"
+    ? [categories[0], "리그", ...categories.slice(1)]
+    : categories;
+}
 export function dayKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Seoul",
@@ -105,7 +110,8 @@ function recordDailyResult(
   round: Round,
   attempts = round.guesses.length,
 ): Stats {
-  if (round.status === "playing" || round.status === "rewardOffer") return stats;
+  if (round.status === "playing" || round.status === "rewardOffer")
+    return stats;
   const won = round.status === "won";
   const streak = won ? stats.streak + 1 : 0;
   const distribution = Array.from(
@@ -153,7 +159,11 @@ export function averageWinningAttempts(stats: Stats): number | null {
 export function money(value: number) {
   return `약 ${new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 0 }).format((value * 1492.35) / 100_000_000)}억 원`;
 }
-export function compare(guess: Player, answer: Player): Clue[] {
+export function compare(
+  guess: Player,
+  answer: Player,
+  mode: Mode = "daily",
+): Clue[] {
   const text = (
     key: Category,
     label: string,
@@ -188,6 +198,16 @@ export function compare(guess: Player, answer: Player): Clue[] {
       guess.country,
       guess.countryId === answer.countryId,
     ),
+    ...(mode === "unlimited"
+      ? [
+          text(
+            "league",
+            "리그",
+            guess.league,
+            guess.leagueId === answer.leagueId,
+          ),
+        ]
+      : []),
     text("club", "구단", guess.club, guess.clubId === answer.clubId),
     text(
       "position",
@@ -285,7 +305,8 @@ export function reducer(state: GameState, action: Action): GameState {
       : state;
   const current = activeRound(state);
   if (action.type === "next") {
-    if (current.status === "playing" || current.status === "rewardOffer") return state;
+    if (current.status === "playing" || current.status === "rewardOffer")
+      return state;
     if (state.mode === "daily")
       return state.active < state.daily.length - 1
         ? { ...state, active: state.active + 1 }
@@ -389,7 +410,9 @@ export function restore(raw: string | null, date = dayKey()): GameState {
         r.guesses.length <= limit &&
         new Set(r.guesses).size === r.guesses.length &&
         r.guesses.every((id) => pools[mode].includes(id)) &&
-        ["playing", "rewardOffer", "won", "lost", "revealed"].includes(r.status) &&
+        ["playing", "rewardOffer", "won", "lost", "revealed"].includes(
+          r.status,
+        ) &&
         (r.status !== "won" || r.guesses.at(-1) === r.answer) &&
         (r.status !== "rewardOffer" ||
           (limit < MAX_TOTAL_ATTEMPTS &&
@@ -481,7 +504,10 @@ export function restore(raw: string | null, date = dayKey()): GameState {
       // saved first daily result, whose mode and actual guess count are known.
       const savedDaily = s.date === date ? daily[0] : s.daily[0];
       stats = emptyStats();
-      if (savedDaily.status !== "playing" && savedDaily.status !== "rewardOffer")
+      if (
+        savedDaily.status !== "playing" &&
+        savedDaily.status !== "rewardOffer"
+      )
         stats = recordDailyResult(
           stats,
           normalizeRound(savedDaily),
@@ -526,7 +552,7 @@ export function shareText(state: GameState) {
     `${state.mode === "daily" ? `${month}월 ${day}일 오늘의 챌린지 ${result}` : "무제한 모드"}`,
     "",
     ...r.guesses.map((id) =>
-      compare(playerMap.get(id)!, answer)
+      compare(playerMap.get(id)!, answer, state.mode)
         .map((c) => marks[c.match])
         .join(""),
     ),

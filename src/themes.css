@@ -756,3 +756,19 @@ a:focus-visible {
     opacity: 0;
   }
 }
+
+/* Unlimited mode includes a league clue; daily keeps its six-clue layout. */
+.clue-grid-unlimited,
+.empty-categories-unlimited {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+@media (max-width: 600px) {
+  .clue-grid-unlimited,
+  .empty-categories-unlimited {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .clue-grid-unlimited > :last-child,
+  .empty-categories-unlimited > :last-child {
+    grid-column: 1 / -1;
+  }
+}

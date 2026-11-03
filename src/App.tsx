@@ -8,7 +8,7 @@ import { useRewardedAd } from "./useRewardedAd";
 import {
   activeRound,
   averageWinningAttempts,
-  categories,
+  categoriesForMode,
   compare,
   DATA_VERSION,
   DAILY_COUNT,
@@ -308,12 +308,13 @@ function Search({
     </div>
   );
 }
-function HelpContent() {
+function HelpContent({ mode }: { mode: Mode }) {
+  const clueCategories = categoriesForMode(mode);
   return (
     <>
       <p className="modal-intro">
-        기본 5번 안에 축구 선수의 정체를 맞혀보세요. 기회를 모두 쓰면 광고를
-        볼 때마다 1번 더 도전할 수 있어요. 광고는 한 문제에서 최대 3번 볼 수
+        기본 5번 안에 축구 선수의 정체를 맞혀보세요. 기회를 모두 쓰면 광고를 볼
+        때마다 1번 더 도전할 수 있어요. 광고는 한 문제에서 최대 3번 볼 수
         있어요.
       </p>
       <ol className="help-steps">
@@ -330,8 +331,10 @@ function HelpContent() {
         <li>
           <span>02</span>
           <div>
-            <strong>색과 방향을 확인하세요</strong>
+            <strong>{clueCategories.length}가지 단서를 확인하세요</strong>
             <p>
+              {clueCategories.join("·")}를 비교해요.
+              <br />
               초록은 정확히 일치, 노랑은 같은 포지션 계열, 빨강은 불일치예요.
             </p>
             <div className="legend">
@@ -584,9 +587,6 @@ export default function App() {
               <span className="logo-question">?</span>
             </h1>
             <p className="hero-korean">이 선수, 누구일까요?</p>
-            <p className="hero-description">
-              기본 5번, 광고로 최대 8번의 기회.
-            </p>
           </div>
           <div className="hero-art" aria-hidden="true">
             <ParticleBall theme={theme} />
@@ -703,17 +703,17 @@ export default function App() {
                 {rewardOffer
                   ? "기회가 더 필요하신가요?"
                   : finished
-                  ? round.status === "won"
-                    ? "정답을 찾았어요!"
-                    : "정답을 확인해 보세요"
-                  : "어떤 선수일까요?"}
+                    ? round.status === "won"
+                      ? "정답을 찾았어요!"
+                      : "정답을 확인해 보세요"
+                    : "어떤 선수일까요?"}
               </h2>
               <p>
                 {rewardOffer
                   ? "정답은 아직 공개되지 않았어요."
                   : finished
-                  ? "단서를 연결한 당신의 추측을 돌아보세요."
-                  : "단서를 모아 정답에 가까워져 보세요."}
+                    ? "단서를 연결한 당신의 추측을 돌아보세요."
+                    : "단서를 모아 정답에 가까워져 보세요."}
               </p>
             </div>
             {round.status === "playing" && (
@@ -874,8 +874,8 @@ export default function App() {
                     <strong>정답의 선수 정보</strong>
                     <span className="guess-status">{answer.name}</span>
                   </div>
-                  <div className="clue-grid">
-                    {compare(answer, answer).map((c) => (
+                  <div className={`clue-grid clue-grid-${state.mode}`}>
+                    {compare(answer, answer, state.mode).map((c) => (
                       <Tile key={c.key} clue={c} />
                     ))}
                   </div>
@@ -909,8 +909,8 @@ export default function App() {
                             )}
                           </span>
                         </div>
-                        <div className="clue-grid">
-                          {compare(p, answer).map((c) => (
+                        <div className={`clue-grid clue-grid-${state.mode}`}>
+                          {compare(p, answer, state.mode).map((c) => (
                             <Tile key={c.key} clue={c} />
                           ))}
                         </div>
@@ -932,8 +932,10 @@ export default function App() {
                       <br />
                       추측할 때마다 단서가 공개돼요.
                     </p>
-                    <div className="empty-categories">
-                      {categories.map((c, i) => (
+                    <div
+                      className={`empty-categories empty-categories-${state.mode}`}
+                    >
+                      {categoriesForMode(state.mode).map((c, i) => (
                         <span key={c}>
                           {c}
                           <i>{String(i + 1).padStart(2, "0")}</i>
@@ -1087,7 +1089,7 @@ export default function App() {
           onClose={() => setModal(null)}
         >
           {modal === "help" ? (
-            <HelpContent />
+            <HelpContent mode={state.mode} />
           ) : modal === "reveal" ? (
             <>
               <p className="modal-intro">
@@ -1158,19 +1160,21 @@ export default function App() {
               </div>
               <h3 className="distribution-title">몇 번 만에 맞혔나요?</h3>
               <div className="distribution">
-                {state.stats.distribution.slice(0, MAX_TOTAL_ATTEMPTS).map((n, i) => (
-                  <div key={i}>
-                    <span>{i + 1}</span>
-                    <div
-                      className="distribution-bar"
-                      style={{
-                        width: `${Math.max(7, (n / Math.max(1, ...state.stats.distribution.slice(0, MAX_TOTAL_ATTEMPTS))) * 100)}%`,
-                      }}
-                    >
-                      {n}
+                {state.stats.distribution
+                  .slice(0, MAX_TOTAL_ATTEMPTS)
+                  .map((n, i) => (
+                    <div key={i}>
+                      <span>{i + 1}</span>
+                      <div
+                        className="distribution-bar"
+                        style={{
+                          width: `${Math.max(7, (n / Math.max(1, ...state.stats.distribution.slice(0, MAX_TOTAL_ATTEMPTS))) * 100)}%`,
+                        }}
+                      >
+                        {n}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
               {!state.stats.played && (
                 <p className="example-caption">
