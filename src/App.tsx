@@ -309,7 +309,7 @@ function HelpContent() {
   return (
     <>
       <p className="modal-intro">
-        6가지 단서를 따라, 5번 안에 축구 선수의 정체를 맞혀보세요.
+        6가지 단서를 따라, 7번 안에 축구 선수의 정체를 맞혀보세요.
       </p>
       <ol className="help-steps">
         <li>
@@ -570,7 +570,7 @@ export default function App() {
             <p className="hero-korean">이 선수, 누구일까요?</p>
             <p className="hero-description">
               당신의 축구 지식에 도전하세요.
-              <br className="mobile-break" /> 6가지 단서, 단 5번의 기회.
+              <br className="mobile-break" /> 6가지 단서, 7번의 기회.
             </p>
           </div>
           <div className="hero-art" aria-hidden="true">
@@ -923,7 +923,7 @@ export default function App() {
             {/*  <div className="mini-step">*/}
             {/*    <span>3</span>*/}
             {/*    <div>*/}
-            {/*      <strong>5번 안에 맞혀보세요</strong>*/}
+            {/*      <strong>7번 안에 맞혀보세요</strong>*/}
             {/*      <p>*/}
             {/*        단서를 조합하면*/}
             {/*        <br />*/}
@@ -975,7 +975,7 @@ export default function App() {
         {/*  <div className="footer-wordmark">*/}
         {/*    WHO AM I<span>?</span>*/}
         {/*  </div>*/}
-        {/*  <p>6가지 단서. 5번의 기회. 당신의 축구 지식.</p>*/}
+        {/*  <p>6가지 단서. 7번의 기회. 당신의 축구 지식.</p>*/}
         {/*</footer>*/}
       </main>
       {showScrollTop && !modal && !toast && (

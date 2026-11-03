@@ -38,7 +38,7 @@ export interface GameState {
   stats: Stats;
   legacyStats?: Omit<Stats, "totalAttempts">;
 }
-export const MAX_ATTEMPTS = 5;
+export const MAX_ATTEMPTS = 7;
 export const DAILY_COUNT = 1;
 export const players = dataset.players;
 export const playerMap = new Map(players.map((p) => [p.id, p]));
@@ -331,8 +331,8 @@ export function restore(raw: string | null, date = dayKey()): GameState {
       const limit = legacyRules ? 8 : (r?.maxAttempts ?? MAX_ATTEMPTS);
       return (
         r &&
-        [MAX_ATTEMPTS, 8].includes(limit) &&
-        (legacyRules || limit === MAX_ATTEMPTS || r.status !== "playing") &&
+        [5, MAX_ATTEMPTS, 8].includes(limit) &&
+        (legacyRules || limit !== 8 || r.status !== "playing") &&
         pools[mode].includes(r.answer) &&
         Array.isArray(r.guesses) &&
         r.guesses.length <= limit &&
@@ -347,7 +347,7 @@ export function restore(raw: string | null, date = dayKey()): GameState {
     const validStats = (stats: Omit<Stats, "totalAttempts">) =>
       stats &&
       Array.isArray(stats.distribution) &&
-      [MAX_ATTEMPTS, 8].includes(stats.distribution.length) &&
+      [5, MAX_ATTEMPTS, 8].includes(stats.distribution.length) &&
       [
         stats.played,
         stats.won,
@@ -396,7 +396,13 @@ export function restore(raw: string | null, date = dayKey()): GameState {
         ? s.daily.slice(0, DAILY_COUNT).map(normalizeRound)
         : dailyAnswers(date).map(makeRound);
     const unlimited = normalizeRound(s.unlimited);
-    let stats = { ...s.stats, distribution: [...s.stats.distribution] };
+    let stats = {
+      ...s.stats,
+      distribution: Array.from(
+        { length: Math.max(s.stats.distribution.length, MAX_ATTEMPTS) },
+        (_, i) => s.stats.distribution[i] ?? 0,
+      ),
+    };
     if (mixedStats) {
       // Mixed historical counters cannot be split by mode. Recover only the
       // saved first daily result, whose mode and actual guess count are known.
