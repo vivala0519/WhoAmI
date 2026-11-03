@@ -4,6 +4,7 @@ import { Icon } from "./icons";
 import playerPhotos from "./player-photos.json";
 import { ParticleBall } from "./ParticleBall";
 import { useInterstitialAd } from "./useInterstitialAd";
+import { useRewardedAd } from "./useRewardedAd";
 import {
   activeRound,
   averageWinningAttempts,
@@ -13,6 +14,8 @@ import {
   DAILY_COUNT,
   dayKey,
   MAX_ATTEMPTS,
+  MAX_REWARDED_ADS,
+  MAX_TOTAL_ATTEMPTS,
   money,
   playerMap,
   pools,
@@ -309,7 +312,9 @@ function HelpContent() {
   return (
     <>
       <p className="modal-intro">
-        6가지 단서를 따라, 7번 안에 축구 선수의 정체를 맞혀보세요.
+        기본 5번 안에 축구 선수의 정체를 맞혀보세요. 기회를 모두 쓰면 광고를
+        볼 때마다 1번 더 도전할 수 있어요. 광고는 한 문제에서 최대 3번 볼 수
+        있어요.
       </p>
       <ol className="help-steps">
         <li>
@@ -403,7 +408,8 @@ function HelpContent() {
   );
 }
 export default function App() {
-  const interstitial = useInterstitialAd();
+  const rewarded = useRewardedAd();
+  const interstitial = useInterstitialAd(rewarded.settled);
   const [theme, setTheme] = useState<"light" | "dark">(() =>
     document.documentElement.dataset.theme === "light" ? "light" : "dark",
   );
@@ -447,9 +453,15 @@ export default function App() {
     const justFinished =
       previous.date === state.date &&
       previous.answer === dailyRound.answer &&
-      previous.status === "playing" &&
-      dailyRound.status !== "playing";
-    if (state.mode !== "daily" || !justFinished) return;
+      (previous.status === "playing" || previous.status === "rewardOffer") &&
+      dailyRound.status !== "playing" &&
+      dailyRound.status !== "rewardOffer";
+    if (
+      state.mode !== "daily" ||
+      !justFinished ||
+      (dailyRound.rewardAdsWatched ?? 0) > 0
+    )
+      return;
     const timer = window.setTimeout(() => {
       if (document.visibilityState === "visible") showIfReady();
     }, 1000);
@@ -459,6 +471,7 @@ export default function App() {
     state.mode,
     dailyRound.answer,
     dailyRound.status,
+    dailyRound.rewardAdsWatched,
     showIfReady,
   ]);
   const [copied, setCopied] = useState(false);
@@ -471,10 +484,13 @@ export default function App() {
   }, []);
   const round = activeRound(state),
     answer = playerMap.get(round.answer)!,
-    finished = round.status !== "playing",
+    rewardOffer = round.status === "rewardOffer",
+    finished = round.status !== "playing" && !rewardOffer,
     attemptLimit = round.maxAttempts ?? MAX_ATTEMPTS,
     averageAttempts = averageWinningAttempts(state.stats),
-    done = state.daily.filter((r) => r.status !== "playing").length;
+    done = state.daily.filter(
+      (r) => r.status !== "playing" && r.status !== "rewardOffer",
+    ).length;
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -569,7 +585,7 @@ export default function App() {
             </h1>
             <p className="hero-korean">이 선수, 누구일까요?</p>
             <p className="hero-description">
-              6가지 단서, 7번의 기회.
+              기본 5번, 광고로 최대 8번의 기회.
             </p>
           </div>
           <div className="hero-art" aria-hidden="true">
@@ -660,7 +676,7 @@ export default function App() {
                     <span
                       key={i}
                       className={`day-step ${state.active === i ? "current" : ""} ${r.status === "won" ? "solved" : ""} ${r.status === "lost" || r.status === "revealed" ? "failed" : ""}`}
-                      aria-label={`${i + 1}번째 문제${r.status !== "playing" ? " 완료" : ""}`}
+                      aria-label={`${i + 1}번째 문제${r.status !== "playing" && r.status !== "rewardOffer" ? " 완료" : ""}`}
                     >
                       {r.status === "won" ? (
                         <Icon name="check" width="15" height="15" />
@@ -684,25 +700,76 @@ export default function App() {
                   : "UNLIMITED CHALLENGE"}
               </span>
               <h2>
-                {finished
+                {rewardOffer
+                  ? "기회가 더 필요하신가요?"
+                  : finished
                   ? round.status === "won"
                     ? "정답을 찾았어요!"
                     : "정답을 확인해 보세요"
                   : "어떤 선수일까요?"}
               </h2>
               <p>
-                {finished
+                {rewardOffer
+                  ? "정답은 아직 공개되지 않았어요."
+                  : finished
                   ? "단서를 연결한 당신의 추측을 돌아보세요."
                   : "단서를 모아 정답에 가까워져 보세요."}
               </p>
             </div>
-            {!finished && (
+            {round.status === "playing" && (
               <Search
                 key={`${state.mode}-${round.answer}`}
                 mode={state.mode}
                 guesses={round.guesses}
                 onGuess={(id) => dispatch({ type: "guess", id })}
               />
+            )}
+            {rewardOffer && (
+              <div className="result-card reward-offer" role="status">
+                <h3>현재 기회를 모두 사용했어요</h3>
+                <p className="result-message">
+                  {rewarded.available
+                    ? `광고를 끝까지 보면 1번 더 도전할 수 있어요. 이번 문제에서 광고를 ${MAX_REWARDED_ADS - (round.rewardAdsWatched ?? 0)}번 더 볼 수 있어요.`
+                    : "정답을 확인하고 이번 도전을 마칠 수 있어요."}
+                </p>
+                <div className="result-buttons">
+                  {rewarded.available && (
+                    <button
+                      className="button primary"
+                      disabled={!rewarded.ready || rewarded.showing}
+                      onClick={() =>
+                        rewarded.showIfReady(() =>
+                          dispatch({
+                            type: "grantReward",
+                            answer: round.answer,
+                            mode: state.mode,
+                            date: state.date,
+                            offerAtGuess: round.guesses.length,
+                          }),
+                        )
+                      }
+                    >
+                      {rewarded.ready
+                        ? "광고 보고 1번 더 도전"
+                        : "광고 준비 중"}
+                    </button>
+                  )}
+                  <button
+                    className="button secondary"
+                    onClick={() =>
+                      dispatch({
+                        type: "finish",
+                        answer: round.answer,
+                        mode: state.mode,
+                        date: state.date,
+                        offerAtGuess: round.guesses.length,
+                      })
+                    }
+                  >
+                    정답 확인하기
+                  </button>
+                </div>
+              </div>
             )}
             {finished && (
               <div
@@ -735,7 +802,7 @@ export default function App() {
                     ? `${round.guesses.length}번 만에 선수를 맞혔어요.`
                     : round.status === "revealed"
                       ? "정답 공개로 이번 도전을 마쳤어요."
-                      : `${attemptLimit}번의 기회를 모두 사용했어요. 다음 선수에게 도전해 보세요.`}
+                      : "이번 도전을 마쳤어요. 다음 선수에게 도전해 보세요."}
                 </p>
                 <div className="result-buttons">
                   <button className="button secondary" onClick={share}>
@@ -747,14 +814,18 @@ export default function App() {
                     <button
                       className="button primary"
                       onClick={() => {
-                        if (state.mode === "unlimited")
+                        if (
+                          state.mode === "unlimited" &&
+                          (round.rewardAdsWatched ?? 0) === 0
+                        )
                           interstitial.showIfReady();
                         dispatch({ type: "next" });
                         setCopied(false);
                       }}
                     >
                       {state.mode === "unlimited"
-                        ? interstitial.ready
+                        ? interstitial.ready &&
+                          (round.rewardAdsWatched ?? 0) === 0
                           ? "다음 선수 도전 · 광고"
                           : "다음 선수 도전"
                         : "다음 문제"}
@@ -848,7 +919,7 @@ export default function App() {
                   })}
                 </>
               ) : (
-                !finished && (
+                round.status === "playing" && (
                   <div className="first-guess">
                     <div className="empty-pitch">
                       <div className="pitch-line" />
@@ -922,7 +993,7 @@ export default function App() {
             {/*  <div className="mini-step">*/}
             {/*    <span>3</span>*/}
             {/*    <div>*/}
-            {/*      <strong>7번 안에 맞혀보세요</strong>*/}
+            {/*      <strong>기본 5번 안에 맞혀보세요</strong>*/}
             {/*      <p>*/}
             {/*        단서를 조합하면*/}
             {/*        <br />*/}
@@ -974,7 +1045,7 @@ export default function App() {
         {/*  <div className="footer-wordmark">*/}
         {/*    WHO AM I<span>?</span>*/}
         {/*  </div>*/}
-        {/*  <p>6가지 단서. 7번의 기회. 당신의 축구 지식.</p>*/}
+        {/*  <p>6가지 단서. 기본 5번의 기회.</p>*/}
         {/*</footer>*/}
       </main>
       {showScrollTop && !modal && !toast && (
@@ -1087,13 +1158,13 @@ export default function App() {
               </div>
               <h3 className="distribution-title">몇 번 만에 맞혔나요?</h3>
               <div className="distribution">
-                {state.stats.distribution.slice(0, MAX_ATTEMPTS).map((n, i) => (
+                {state.stats.distribution.slice(0, MAX_TOTAL_ATTEMPTS).map((n, i) => (
                   <div key={i}>
                     <span>{i + 1}</span>
                     <div
                       className="distribution-bar"
                       style={{
-                        width: `${Math.max(7, (n / Math.max(1, ...state.stats.distribution.slice(0, MAX_ATTEMPTS))) * 100)}%`,
+                        width: `${Math.max(7, (n / Math.max(1, ...state.stats.distribution.slice(0, MAX_TOTAL_ATTEMPTS))) * 100)}%`,
                       }}
                     >
                       {n}

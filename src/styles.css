@@ -815,6 +815,14 @@ h1 {
   border-radius: 12px;
   padding: 21px;
 }
+.reward-offer h3 {
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.reward-offer .button:disabled {
+  opacity: 0.6;
+}
 .result-won {
   border-color: #6e925b;
   background: linear-gradient(115deg, #1c3c3e, #1b3448);
@@ -1772,6 +1780,9 @@ h1 {
   }
   .result-buttons {
     gap: 8px;
+  }
+  .reward-offer .result-buttons {
+    flex-direction: column;
   }
   .modal {
     padding: 21px 18px;

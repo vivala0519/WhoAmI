@@ -9,11 +9,12 @@ const adGroupId = import.meta.env.DEV
   ? TEST_ID
   : import.meta.env.VITE_TOSS_INTERSTITIAL_AD_GROUP_ID;
 
-export function useInterstitialAd() {
+export function useInterstitialAd(enabled: boolean) {
   const [ready, setReady] = useState(false);
   const showRef = useRef<() => void>(() => {});
 
   useEffect(() => {
+    if (!enabled) return;
     if (!adGroupId) return;
     let alive = true;
     let loaded = false;
@@ -89,7 +90,7 @@ export function useInterstitialAd() {
       unregisterLoad?.();
       unregisterShow?.();
     };
-  }, []);
+  }, [enabled]);
 
   const showIfReady = useCallback(() => showRef.current(), []);
   return { ready, showIfReady };

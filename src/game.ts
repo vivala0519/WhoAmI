@@ -2,7 +2,7 @@ import dataset from "./players.json";
 import dailySchedule from "./daily-schedule.json";
 export type Player = (typeof dataset.players)[number];
 export type Mode = "daily" | "unlimited";
-export type Status = "playing" | "won" | "lost" | "revealed";
+export type Status = "playing" | "rewardOffer" | "won" | "lost" | "revealed";
 export type Match = "exact" | "near" | "miss";
 export type Category =
   "country" | "club" | "position" | "birthYear" | "number" | "value";
@@ -16,6 +16,7 @@ export interface Clue {
 }
 export interface Round {
   maxAttempts?: number;
+  rewardAdsWatched?: number;
   answer: string;
   guesses: string[];
   status: Status;
@@ -29,7 +30,7 @@ export interface Stats {
   distribution: number[];
 }
 export interface GameState {
-  version: 3;
+  version: 4;
   date: string;
   mode: Mode;
   daily: Round[];
@@ -38,7 +39,9 @@ export interface GameState {
   stats: Stats;
   legacyStats?: Omit<Stats, "totalAttempts">;
 }
-export const MAX_ATTEMPTS = 7;
+export const MAX_ATTEMPTS = 5;
+export const MAX_REWARDED_ADS = 3;
+export const MAX_TOTAL_ATTEMPTS = 8;
 export const DAILY_COUNT = 1;
 export const players = dataset.players;
 export const playerMap = new Map(players.map((p) => [p.id, p]));
@@ -77,6 +80,7 @@ export function dailyAnswers(date: string) {
 export const makeRound = (answer: string): Round => ({
   answer,
   maxAttempts: MAX_ATTEMPTS,
+  rewardAdsWatched: 0,
   guesses: [],
   status: "playing",
 });
@@ -93,7 +97,7 @@ function emptyStats(): Stats {
     won: 0,
     streak: 0,
     best: 0,
-    distribution: Array(MAX_ATTEMPTS).fill(0),
+    distribution: Array(MAX_TOTAL_ATTEMPTS).fill(0),
   };
 }
 function recordDailyResult(
@@ -101,7 +105,7 @@ function recordDailyResult(
   round: Round,
   attempts = round.guesses.length,
 ): Stats {
-  if (round.status === "playing") return stats;
+  if (round.status === "playing" || round.status === "rewardOffer") return stats;
   const won = round.status === "won";
   const streak = won ? stats.streak + 1 : 0;
   const distribution = Array.from(
@@ -125,7 +129,7 @@ function recordDailyResult(
 }
 export function initialState(date = dayKey()): GameState {
   return {
-    version: 3,
+    version: 4,
     date,
     mode: "daily",
     daily: dailyAnswers(date).map(makeRound),
@@ -252,6 +256,13 @@ export type Action =
   | { type: "mode"; mode: Mode }
   | { type: "guess"; id: string }
   | { type: "reveal" }
+  | {
+      type: "grantReward" | "finish";
+      answer: string;
+      mode: Mode;
+      date: string;
+      offerAtGuess: number;
+    }
   | { type: "next"; answer?: string }
   | { type: "daily"; index: number }
   | { type: "day"; date: string };
@@ -274,7 +285,7 @@ export function reducer(state: GameState, action: Action): GameState {
       : state;
   const current = activeRound(state);
   if (action.type === "next") {
-    if (current.status === "playing") return state;
+    if (current.status === "playing" || current.status === "rewardOffer") return state;
     if (state.mode === "daily")
       return state.active < state.daily.length - 1
         ? { ...state, active: state.active + 1 }
@@ -284,14 +295,45 @@ export function reducer(state: GameState, action: Action): GameState {
       ? { ...state, unlimited: makeRound(answer) }
       : state;
   }
+  if (action.type === "grantReward" || action.type === "finish") {
+    if (
+      current.status !== "rewardOffer" ||
+      current.rewardAdsWatched === undefined ||
+      current.rewardAdsWatched >= MAX_REWARDED_ADS ||
+      current.maxAttempts !== MAX_ATTEMPTS + current.rewardAdsWatched ||
+      current.guesses.length !== current.maxAttempts ||
+      action.offerAtGuess !== current.guesses.length ||
+      action.answer !== current.answer ||
+      action.mode !== state.mode ||
+      action.date !== state.date
+    )
+      return state;
+    const round: Round =
+      action.type === "grantReward"
+        ? {
+            ...current,
+            rewardAdsWatched: current.rewardAdsWatched + 1,
+            maxAttempts: current.maxAttempts + 1,
+            status: "playing",
+          }
+        : { ...current, status: "lost" };
+    return state.mode === "daily"
+      ? {
+          ...state,
+          stats: recordDailyResult(state.stats, round),
+          daily: state.daily.map((r, i) => (i === state.active ? round : r)),
+        }
+      : { ...state, unlimited: round };
+  }
   if (current.status !== "playing") return state;
   let round: Round;
   if (action.type === "reveal") round = { ...current, status: "revealed" };
   else if (action.type === "guess") {
+    const limit = current.maxAttempts ?? MAX_ATTEMPTS;
     if (
       !pools[state.mode].includes(action.id) ||
       current.guesses.includes(action.id) ||
-      current.guesses.length >= MAX_ATTEMPTS
+      current.guesses.length >= limit
     )
       return state;
     const guesses = [...current.guesses, action.id];
@@ -301,8 +343,11 @@ export function reducer(state: GameState, action: Action): GameState {
       status:
         action.id === current.answer
           ? "won"
-          : guesses.length >= MAX_ATTEMPTS
-            ? "lost"
+          : guesses.length >= limit
+            ? current.rewardAdsWatched !== undefined &&
+              current.rewardAdsWatched < MAX_REWARDED_ADS
+              ? "rewardOffer"
+              : "lost"
             : "playing",
     };
   } else return state;
@@ -329,17 +374,29 @@ export function restore(raw: string | null, date = dayKey()): GameState {
     const mixedStats = s.version < 3;
     const validRound = (r: Round, mode: Mode) => {
       const limit = legacyRules ? 8 : (r?.maxAttempts ?? MAX_ATTEMPTS);
+      const watched = r?.rewardAdsWatched;
       return (
         r &&
-        [5, MAX_ATTEMPTS, 8].includes(limit) &&
-        (legacyRules || limit !== 8 || r.status !== "playing") &&
+        [5, 6, 7, MAX_TOTAL_ATTEMPTS].includes(limit) &&
+        (watched === undefined
+          ? [5, 7, MAX_TOTAL_ATTEMPTS].includes(limit)
+          : Number.isInteger(watched) &&
+            watched >= 0 &&
+            watched <= MAX_REWARDED_ADS &&
+            limit === MAX_ATTEMPTS + watched) &&
         pools[mode].includes(r.answer) &&
         Array.isArray(r.guesses) &&
         r.guesses.length <= limit &&
         new Set(r.guesses).size === r.guesses.length &&
         r.guesses.every((id) => pools[mode].includes(id)) &&
-        ["playing", "won", "lost", "revealed"].includes(r.status) &&
+        ["playing", "rewardOffer", "won", "lost", "revealed"].includes(r.status) &&
         (r.status !== "won" || r.guesses.at(-1) === r.answer) &&
+        (r.status !== "rewardOffer" ||
+          (limit < MAX_TOTAL_ATTEMPTS &&
+            (watched !== undefined ||
+              (s.version === 3 && limit === MAX_ATTEMPTS)) &&
+            r.guesses.length === limit &&
+            !r.guesses.includes(r.answer))) &&
         (r.status !== "playing" ||
           (r.guesses.length < limit && !r.guesses.includes(r.answer)))
       );
@@ -347,7 +404,7 @@ export function restore(raw: string | null, date = dayKey()): GameState {
     const validStats = (stats: Omit<Stats, "totalAttempts">) =>
       stats &&
       Array.isArray(stats.distribution) &&
-      [5, MAX_ATTEMPTS, 8].includes(stats.distribution.length) &&
+      [5, 7, MAX_TOTAL_ATTEMPTS].includes(stats.distribution.length) &&
       [
         stats.played,
         stats.won,
@@ -357,7 +414,7 @@ export function restore(raw: string | null, date = dayKey()): GameState {
       ].every((n) => Number.isInteger(n) && n >= 0) &&
       stats.won <= stats.played;
     if (
-      ![1, 2, 3].includes(s.version) ||
+      ![1, 2, 3, 4].includes(s.version) ||
       !["daily", "unlimited"].includes(s.mode) ||
       !/^\d{4}-\d{2}-\d{2}$/.test(s.date) ||
       !Array.isArray(s.daily) ||
@@ -377,19 +434,35 @@ export function restore(raw: string | null, date = dayKey()): GameState {
     )
       return fresh();
     const normalizeRound = (round: Round): Round => {
+      const oldLimit = legacyRules
+        ? MAX_TOTAL_ATTEMPTS
+        : (round.maxAttempts ?? MAX_ATTEMPTS);
+      if (round.rewardAdsWatched !== undefined)
+        return { ...round, maxAttempts: oldLimit };
+      if (round.status === "rewardOffer")
+        return { ...round, maxAttempts: MAX_ATTEMPTS, rewardAdsWatched: 0 };
       if (round.status !== "playing")
+        return { ...round, maxAttempts: oldLimit };
+      // A save from the interim +3-per-ad rule may have one rewarded ad and
+      // five to seven guesses. Keep its progress under the corrected rule.
+      if (
+        !legacyRules &&
+        oldLimit === MAX_TOTAL_ATTEMPTS &&
+        round.guesses.length >= MAX_ATTEMPTS
+      ) {
+        const watched = Math.max(1, round.guesses.length - MAX_ATTEMPTS);
+        const limit = MAX_ATTEMPTS + watched;
         return {
           ...round,
-          maxAttempts: legacyRules ? 8 : (round.maxAttempts ?? MAX_ATTEMPTS),
+          maxAttempts: limit,
+          rewardAdsWatched: watched,
+          status: round.guesses.length === limit ? "rewardOffer" : "playing",
         };
+      }
+      // Preserve progress in older rounds already past the new base limit.
       if (round.guesses.length >= MAX_ATTEMPTS)
-        return {
-          ...round,
-          guesses: round.guesses.slice(0, MAX_ATTEMPTS),
-          maxAttempts: MAX_ATTEMPTS,
-          status: "lost",
-        };
-      return { ...round, maxAttempts: MAX_ATTEMPTS };
+        return { ...round, maxAttempts: oldLimit };
+      return { ...round, maxAttempts: MAX_ATTEMPTS, rewardAdsWatched: 0 };
     };
     const daily =
       s.date === date
@@ -399,7 +472,7 @@ export function restore(raw: string | null, date = dayKey()): GameState {
     let stats = {
       ...s.stats,
       distribution: Array.from(
-        { length: Math.max(s.stats.distribution.length, MAX_ATTEMPTS) },
+        { length: Math.max(s.stats.distribution.length, MAX_TOTAL_ATTEMPTS) },
         (_, i) => s.stats.distribution[i] ?? 0,
       ),
     };
@@ -408,7 +481,7 @@ export function restore(raw: string | null, date = dayKey()): GameState {
       // saved first daily result, whose mode and actual guess count are known.
       const savedDaily = s.date === date ? daily[0] : s.daily[0];
       stats = emptyStats();
-      if (savedDaily.status !== "playing")
+      if (savedDaily.status !== "playing" && savedDaily.status !== "rewardOffer")
         stats = recordDailyResult(
           stats,
           normalizeRound(savedDaily),
@@ -417,7 +490,7 @@ export function restore(raw: string | null, date = dayKey()): GameState {
     }
     return {
       ...s,
-      version: 3,
+      version: 4,
       date,
       active: 0,
       daily,
@@ -442,9 +515,15 @@ export function shareText(state: GameState) {
   const r = activeRound(state),
     answer = playerMap.get(r.answer)!,
     marks = { exact: "🟩", near: "🟨", miss: "🟥" };
+  const result =
+    r.status === "won"
+      ? "성공!"
+      : r.status === "playing" || r.status === "rewardOffer"
+        ? "진행 중"
+        : "실패!";
   return [
     "Who am I?",
-    `${state.mode === "daily" ? `${month}월 ${day}일 오늘의 챌린지 ${r.status === "won" ? "성공!" : "실패!"}` : "무제한 모드"}`,
+    `${state.mode === "daily" ? `${month}월 ${day}일 오늘의 챌린지 ${result}` : "무제한 모드"}`,
     "",
     ...r.guesses.map((id) =>
       compare(playerMap.get(id)!, answer)
