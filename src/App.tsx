@@ -569,8 +569,7 @@ export default function App() {
             </h1>
             <p className="hero-korean">이 선수, 누구일까요?</p>
             <p className="hero-description">
-              당신의 축구 지식에 도전하세요.
-              <br className="mobile-break" /> 6가지 단서, 7번의 기회.
+              6가지 단서, 7번의 기회.
             </p>
           </div>
           <div className="hero-art" aria-hidden="true">
@@ -860,7 +859,7 @@ export default function App() {
                     <p>
                       떠오르는 선수부터 시작해 보세요.
                       <br />
-                      추측할 때마다 6가지 단서가 공개돼요.
+                      추측할 때마다 단서가 공개돼요.
                     </p>
                     <div className="empty-categories">
                       {categories.map((c, i) => (
