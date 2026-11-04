@@ -540,7 +540,7 @@ export function shareText(state: GameState) {
   const [, month, day] = state.date.split("-");
   const r = activeRound(state),
     answer = playerMap.get(r.answer)!,
-    marks = { exact: "🟩", near: "🟨", miss: "🟥" };
+    marks = { exact: "🟪", near: "🟨", miss: "🟥" };
   const result =
     r.status === "won"
       ? "성공!"

@@ -17,19 +17,22 @@
   --action-bg: #3169df;
   --action-hover: #2558c2;
   --action-text: #ffffff;
-  --success-bg: #203f34;
-  --success-line: #477a5d;
-  --success-text: #c6efd2;
+  --success-bg: #465ba6;
+  --success-line: #91a2ff;
+  --success-text: #ffffff;
   --warning-bg: #443b26;
   --warning-line: #8f7a46;
   --warning-text: #ffe3a2;
-  --danger-bg: #442b37;
-  --danger-line: #895265;
-  --danger-text: #ffcbd6;
-  --green: #65c088;
-  --solved-text: #101722;
-  --red: #ee8496;
-  --yellow: #e3be69;
+  --near-bg: #5a4f25;
+  --near-line: #e4c85b;
+  --near-text: #fff4cb;
+  --danger-bg: #663a51;
+  --danger-line: #f28fb5;
+  --danger-text: #ffe8f2;
+  --match: #91a2ff;
+  --solved-text: #0b1020;
+  --near: #e4c85b;
+  --miss: #f28fb5;
   --dim: rgba(5, 13, 25, 0.65);
   --card-shadow: 0 8px 28px #050d191f;
 }
@@ -48,19 +51,22 @@
   --accent: #275fce;
   --accent-soft: #e9f1ff;
   --accent-line: #c6d9fb;
-  --success-bg: #e9f5ed;
-  --success-line: #a2cfb0;
-  --success-text: #24653b;
+  --success-bg: #e4e8ff;
+  --success-line: #4b56b8;
+  --success-text: #354596;
   --warning-bg: #fff5da;
   --warning-line: #dfc780;
   --warning-text: #78530c;
-  --danger-bg: #fcebf0;
-  --danger-line: #e2b3bf;
-  --danger-text: #942f4b;
-  --green: #31814e;
+  --near-bg: #fff4c9;
+  --near-line: #80670f;
+  --near-text: #655308;
+  --danger-bg: #ffe4ee;
+  --danger-line: #ad3e6c;
+  --danger-text: #873458;
+  --match: #4b56b8;
   --solved-text: #ffffff;
-  --red: #b54054;
-  --yellow: #936817;
+  --near: #80670f;
+  --miss: #ad3e6c;
   --dim: rgba(15, 31, 49, 0.4);
   --card-shadow: 0 8px 28px #263e5b06;
 }
@@ -268,9 +274,9 @@ a:focus-visible {
   background: var(--accent-soft);
 }
 .day-step.solved {
-  background: var(--green);
+  background: var(--match);
   color: var(--solved-text);
-  border-color: var(--green);
+  border-color: var(--match);
 }
 .day-step.failed {
   color: var(--danger-text);
@@ -365,9 +371,9 @@ a:focus-visible {
   color: var(--success-text);
 }
 .clue.near {
-  background: var(--warning-bg);
-  border-color: var(--warning-line);
-  color: var(--warning-text);
+  background: var(--near-bg);
+  border-color: var(--near-line);
+  color: var(--near-text);
 }
 .clue.miss {
   background: var(--danger-bg);

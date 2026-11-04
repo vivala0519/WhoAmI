@@ -15,9 +15,9 @@
   --line: #28415e;
   --muted: #a5b6cd;
   --accent: #8dbbff;
-  --green: #5bb979;
-  --red: #cc5261;
-  --yellow: #d3ac54;
+  --match: #91a2ff;
+  --near: #e4c85b;
+  --miss: #f28fb5;
   --dim: rgba(0, 0, 0, 0.68);
 }
 * {
@@ -334,13 +334,13 @@ h1 {
   background: #8dbbff10;
 }
 .day-step.solved {
-  background: var(--green);
-  color: #061b27;
-  border-color: var(--green);
+  background: var(--match);
+  color: #0b1020;
+  border-color: var(--match);
 }
 .day-step.failed {
-  color: #f2909a;
-  border-color: #cc5261;
+  color: var(--miss);
+  border-color: var(--miss);
 }
 .unlimited-label {
   display: flex;
@@ -651,23 +651,23 @@ h1 {
 .footer-legend i:not(:first-child) {
   margin-left: 8px;
 }
-.green,
-.red,
-.yellow {
+.match-dot,
+.near-dot,
+.miss-dot {
   width: 8px;
   height: 8px;
   border-radius: 2px;
   display: inline-block;
   flex-shrink: 0;
 }
-.green {
-  background: var(--green);
+.match-dot {
+  background: var(--match);
 }
-.yellow {
-  background: var(--yellow);
+.near-dot {
+  background: var(--near);
 }
-.red {
-  background: var(--red);
+.miss-dot {
+  background: var(--miss);
 }
 .text-button {
   display: flex;
@@ -756,19 +756,19 @@ h1 {
   text-align: center;
 }
 .clue.exact {
-  background: #254e41;
-  border-color: #447e61;
-  color: #d7f2d9;
+  background: #465ba6;
+  border-color: #91a2ff;
+  color: #ffffff;
 }
 .clue.near {
-  background: #53492b;
-  border-color: #a48a42;
-  color: #ffebad;
+  background: #5a4f25;
+  border-color: #e4c85b;
+  color: #fff4cb;
 }
 .clue.miss {
-  background: #4e2f41;
-  border-color: #815068;
-  color: #f8ced6;
+  background: #663a51;
+  border-color: #f28fb5;
+  color: #ffe8f2;
 }
 .clue-content {
   display: flex;

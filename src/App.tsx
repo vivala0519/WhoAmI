@@ -335,19 +335,19 @@ function HelpContent({ mode }: { mode: Mode }) {
             <p>
               {clueCategories.join("·")}를 비교해요.
               <br />
-              초록은 정확히 일치, 노랑은 같은 포지션 계열, 빨강은 불일치예요.
+              보라는 정확히 일치, 노랑은 같은 포지션 계열, 분홍은 불일치예요.
             </p>
             <div className="legend">
               <span>
-                <i className="green" />
+                <i className="match-dot" />
                 일치
               </span>
               <span>
-                <i className="yellow" />
+                <i className="near-dot" />
                 같은 계열
               </span>
               <span>
-                <i className="red" />
+                <i className="miss-dot" />
                 불일치
               </span>
             </div>
@@ -910,11 +910,11 @@ export default function App() {
             </div>
             <div className="board-footer">
               <span className="footer-legend">
-                <i className="green" />
+                <i className="match-dot" />
                 일치
-                <i className="yellow" />
+                <i className="near-dot" />
                 같은 계열
-                <i className="red" />
+                <i className="miss-dot" />
                 불일치
               </span>
               {finished && (
