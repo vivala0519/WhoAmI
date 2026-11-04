@@ -439,44 +439,6 @@ export default function App() {
   const [modal, setModal] = useState<ModalType>(null),
     [toast, setToast] = useState(""),
     [tick, setTick] = useState(Date.now());
-  const dailyRound = state.daily[0];
-  const previousDaily = useRef({
-    date: state.date,
-    answer: dailyRound.answer,
-    status: dailyRound.status,
-  });
-  const { showIfReady } = interstitial;
-  useEffect(() => {
-    const previous = previousDaily.current;
-    previousDaily.current = {
-      date: state.date,
-      answer: dailyRound.answer,
-      status: dailyRound.status,
-    };
-    const justFinished =
-      previous.date === state.date &&
-      previous.answer === dailyRound.answer &&
-      (previous.status === "playing" || previous.status === "rewardOffer") &&
-      dailyRound.status !== "playing" &&
-      dailyRound.status !== "rewardOffer";
-    if (
-      state.mode !== "daily" ||
-      !justFinished ||
-      (dailyRound.rewardAdsWatched ?? 0) > 0
-    )
-      return;
-    const timer = window.setTimeout(() => {
-      if (document.visibilityState === "visible") showIfReady();
-    }, 1000);
-    return () => window.clearTimeout(timer);
-  }, [
-    state.date,
-    state.mode,
-    dailyRound.answer,
-    dailyRound.status,
-    dailyRound.rewardAdsWatched,
-    showIfReady,
-  ]);
   const [copied, setCopied] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   useEffect(() => {
