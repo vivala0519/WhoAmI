@@ -13,6 +13,7 @@ export type IconName =
   | "eye"
   | "chevron"
   | "trophy"
+  | "book"
   | "sun"
   | "moon";
 export function Icon({
@@ -74,6 +75,12 @@ export function Icon({
     trophy: (
       <>
         <path d="M7 3h10v6a5 5 0 0 1-10 0V3Zm5 11v6m-4 1h8M7 5H3v3c0 3 2 4 5 4m9-7h4v3c0 3-2 4-5 4" />
+      </>
+    ),
+    book: (
+      <>
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5Z" />
+        <path d="M4 17.5A2.5 2.5 0 0 1 6.5 15H20M8 7h8" />
       </>
     ),
   };

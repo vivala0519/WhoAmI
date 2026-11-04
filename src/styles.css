@@ -194,6 +194,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   border-bottom: 1px solid var(--line);
   padding: 0 0 22px;
   gap: 20px;
@@ -244,6 +245,7 @@ h1 {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-left: auto;
 }
 .date-dot {
   height: 3px;
@@ -867,6 +869,32 @@ h1 {
   line-height: 1.7;
   margin: 18px 0;
 }
+.collection-earned {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+}
+.collection-earned:hover {
+  background: var(--surface-hover);
+}
+.collection-earned span {
+  flex: 1;
+}
+.collection-earned svg {
+  width: 18px;
+  height: 18px;
+}
 .result-buttons {
   display: flex;
   gap: 10px;
@@ -1138,6 +1166,378 @@ h1 {
   font-size: 23px;
   font-weight: 700;
   letter-spacing: -0.6px;
+}
+.collection-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.collection-tabs button {
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+.collection-tabs button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+.collection-summary {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.collection-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: 15px;
+}
+.collection-summary h3 {
+  margin-top: 4px;
+  font-size: 19px;
+  font-weight: 700;
+}
+.collection-summary strong {
+  flex-shrink: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.collection-summary small {
+  font-size: 15px;
+  color: var(--muted);
+}
+.collection-empty {
+  padding: 24px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+  text-align: center;
+}
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.collection-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.collection-card-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+.collection-card-button:hover {
+  background: var(--surface-hover);
+}
+.collection-thumb-date {
+  display: none;
+}
+.collection-card .avatar {
+  display: flex;
+  width: 100%;
+  height: 132px;
+  border-radius: 0;
+}
+.collection-card .avatar svg {
+  width: 100px;
+  height: 100px;
+}
+.collection-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+}
+.collection-card-info strong {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.collection-card-info span {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.collection-card-info .collection-card-date {
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  color: var(--subtle);
+}
+.collection-detail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  margin-bottom: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+.collection-detail-back:hover {
+  background: var(--surface-hover);
+}
+.collection-detail-back svg {
+  width: 18px;
+  height: 18px;
+  transform: rotate(180deg);
+}
+.collection-detail-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.collection-detail-card .avatar {
+  display: flex;
+  width: 100%;
+  height: 220px;
+  border-radius: 0;
+}
+.collection-detail-card .avatar svg {
+  width: 170px;
+  height: 170px;
+}
+.collection-detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 18px;
+}
+.collection-detail-info strong {
+  font-size: 22px;
+  font-weight: 700;
+}
+.collection-detail-info span {
+  color: var(--muted);
+  font-size: 15px;
+}
+.collection-animation {
+  --book-bottom: max(34px, env(safe-area-inset-bottom));
+  --book-origin-x: 0px;
+  --book-origin-y: 0px;
+  --flight-y: calc(55dvh - var(--book-bottom) - 66px);
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  overflow: hidden;
+  pointer-events: none;
+  background: rgb(3 11 24 / 74%);
+  backdrop-filter: blur(5px);
+  animation: collection-scene 3.6s linear both;
+}
+.collection-animation-card {
+  position: absolute;
+  top: 45dvh;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  width: min(228px, 58vw, 34dvh);
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 2px solid var(--accent);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 20px 70px #000a, 0 0 35px var(--accent-soft);
+  transform-origin: center;
+  animation: collection-card-flight 2.6s both;
+  will-change: transform, opacity;
+}
+.collection-animation-card .avatar {
+  width: 100%;
+  height: 62%;
+  flex: 0 0 62%;
+  border-radius: 0;
+}
+.collection-animation-card .avatar svg {
+  width: 115px;
+  height: 115px;
+}
+.collection-animation-card-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px 13px;
+}
+.collection-animation-card-info span {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+.collection-animation-card-info strong {
+  overflow: hidden;
+  font-size: clamp(16px, 3vw, 20px);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.collection-animation-card-info small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.collection-animation-source {
+  position: absolute;
+  top: max(12px, calc(env(safe-area-inset-top) + 12px));
+  left: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent);
+  opacity: 0;
+}
+.collection-animation-book-anchor {
+  position: absolute;
+  bottom: var(--book-bottom);
+  left: 50%;
+  width: 200px;
+  transform: translateX(-50%);
+}
+.collection-animation-book {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 200px;
+  color: var(--accent);
+  transform-origin: center;
+  animation: collection-book-journey 3.6s both;
+  will-change: transform, opacity;
+}
+.collection-animation-book::before {
+  position: absolute;
+  top: 12px;
+  width: 170px;
+  height: 90px;
+  border-radius: 50%;
+  background: var(--accent);
+  content: "";
+  filter: blur(30px);
+  opacity: 0;
+  animation: collection-book-glow 0.65s 1.95s ease-out both;
+}
+.collection-animation-book svg {
+  position: relative;
+  width: 200px;
+  height: 115px;
+  filter: drop-shadow(0 10px 10px #0008);
+  animation: collection-book-catch 0.6s 1.95s ease-out both;
+}
+.collection-animation-book span {
+  position: relative;
+  padding: 3px 12px;
+  border: 1px solid var(--accent-line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+@keyframes collection-scene {
+  0% { opacity: 0; }
+  3%, 97% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes collection-card-flight {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 45px)) scale(0.58) rotate(-12deg);
+  }
+  22% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1) rotate(3deg);
+  }
+  38% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0);
+    animation-timing-function: cubic-bezier(0.38, 0.03, 0.68, 1);
+  }
+  88% {
+    opacity: 1;
+    transform: translate(-50%, calc(-50% + var(--flight-y))) scale(0.11) rotate(720deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + var(--flight-y))) scale(0.07) rotate(720deg);
+  }
+}
+@keyframes collection-book-journey {
+  0% {
+    opacity: 0;
+    transform: translate(var(--book-origin-x), var(--book-origin-y)) scale(0.12);
+  }
+  4% {
+    opacity: 1;
+    transform: translate(var(--book-origin-x), var(--book-origin-y)) scale(0.2);
+    animation-timing-function: cubic-bezier(0.15, 0.75, 0.23, 1);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  76% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+    animation-timing-function: cubic-bezier(0.55, 0.06, 0.75, 0.4);
+  }
+  96% {
+    opacity: 1;
+    transform: translate(var(--book-origin-x), var(--book-origin-y)) scale(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--book-origin-x), var(--book-origin-y)) scale(0.12);
+  }
+}
+@keyframes collection-book-catch {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+}
+@keyframes collection-book-glow {
+  0%, 100% { opacity: 0; }
+  45% { opacity: 0.42; }
 }
 .modal-intro {
   font-size: 15px;
@@ -1788,6 +2188,43 @@ h1 {
     padding: 21px 18px;
     border-radius: 14px;
     max-height: calc(100dvh - 40px);
+  }
+  .collection-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .collection-card {
+    border-radius: 7px;
+  }
+  .collection-card .avatar {
+    width: 100%;
+    height: auto;
+    min-height: 44px;
+    aspect-ratio: 1;
+  }
+  .collection-card .avatar svg {
+    width: 100%;
+    height: 100%;
+  }
+  .collection-card-info {
+    display: none;
+  }
+  .collection-thumb-date {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: block;
+    padding: 2px 0;
+    background: rgb(3 11 24 / 88%);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .collection-detail-card .avatar {
+    height: 180px;
   }
   .modal-head h2 {
     font-size: 21px;

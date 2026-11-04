@@ -1,5 +1,5 @@
-import { useEffect, useId, useReducer, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useReducer, useRef, useState } from "react";
+import type { ReactNode, RefObject } from "react";
 import { Icon } from "./icons";
 import playerPhotos from "./player-photos.json";
 import { ParticleBall } from "./ParticleBall";
@@ -27,7 +27,7 @@ import {
 import type { Clue, Mode, Player } from "./game";
 
 const STORAGE_KEY = "who-am-i-ko:v1";
-type ModalType = "help" | "stats" | "reveal" | "share" | null;
+type ModalType = "help" | "stats" | "collection" | "reveal" | "share" | null;
 function Kit({
   number = "?",
   color = "var(--accent)",
@@ -410,6 +410,247 @@ function HelpContent({ mode }: { mode: Mode }) {
     </>
   );
 }
+function CollectionContent({
+  collections,
+  dailyCollectionDates,
+  selected,
+  onSelect,
+}: {
+  collections: Record<Mode, string[]>;
+  dailyCollectionDates: Record<string, string>;
+  selected: Mode;
+  onSelect: (mode: Mode) => void;
+}) {
+  const ids = collections[selected];
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const selectedPlayer =
+    selectedCardId && ids.includes(selectedCardId)
+      ? playerMap.get(selectedCardId)
+      : null;
+  return (
+    <>
+      <div className="collection-tabs" role="group" aria-label="도감 선택">
+        <button
+          type="button"
+          aria-pressed={selected === "daily"}
+          onClick={() => {
+            setSelectedCardId(null);
+            onSelect("daily");
+          }}
+        >
+          프리미어리그
+        </button>
+        <button
+          type="button"
+          aria-pressed={selected === "unlimited"}
+          onClick={() => {
+            setSelectedCardId(null);
+            onSelect("unlimited");
+          }}
+        >
+          TOP 250
+        </button>
+      </div>
+      <div className="collection-summary" role="status">
+        <div>
+          <span>{selected === "daily" ? "오늘의 챌린지" : "무제한 모드"}</span>
+          <h3>{selected === "daily" ? "프리미어리그 도감" : "TOP 250 도감"}</h3>
+        </div>
+        <strong>
+          {ids.length}<small> / {pools[selected].length}</small>
+        </strong>
+      </div>
+      {selectedPlayer ? (
+        <div className="collection-detail">
+          <button
+            type="button"
+            className="collection-detail-back"
+            onClick={() => setSelectedCardId(null)}
+            autoFocus
+          >
+            <Icon name="chevron" />
+            도감으로 돌아가기
+          </button>
+          <div className="collection-detail-card">
+            <PlayerAvatar player={selectedPlayer} />
+            <div className="collection-detail-info">
+              <strong>{selectedPlayer.name}</strong>
+              <span>{selectedPlayer.club}</span>
+              {selected === "daily" && (
+                <span>
+                  {dailyCollectionDates[selectedPlayer.id]
+                    ? `획득일 ${dailyCollectionDates[selectedPlayer.id].replaceAll("-", ".")}`
+                    : "획득일 미기록"}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : ids.length === 0 ? (
+        <p className="collection-empty">
+          아직 수집한 선수가 없어요. 이 모드에서 정답을 맞히면 카드가 모여요.
+        </p>
+      ) : (
+        <ul className="collection-grid">
+          {[...ids].reverse().map((id) => {
+            const player = playerMap.get(id);
+            if (!player) return null;
+            const date = dailyCollectionDates[id];
+            return (
+              <li className="collection-card" key={id}>
+                <button
+                  type="button"
+                  className="collection-card-button"
+                  onClick={() => setSelectedCardId(id)}
+                  aria-label={`${player.name}, ${player.club}${selected === "daily" ? `, 획득일 ${date ?? "미기록"}` : ""}, 카드 보기`}
+                >
+                  <PlayerAvatar player={player} />
+                  {selected === "daily" && (
+                    <span className="collection-thumb-date" aria-hidden="true">
+                      {date ? date.slice(5).replace("-", ".") : "미기록"}
+                    </span>
+                  )}
+                  <div className="collection-card-info">
+                    <strong>{player.name}</strong>
+                    <span>{player.club}</span>
+                    {selected === "daily" && (
+                      <span className="collection-card-date">
+                        {date ? `획득일 ${date.replaceAll("-", ".")}` : "획득일 미기록"}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
+  );
+}
+function CollectionAnimation({
+  player,
+  mode,
+  iconRef,
+  onComplete,
+}: {
+  player: Player;
+  mode: Mode;
+  iconRef: RefObject<HTMLButtonElement | null>;
+  onComplete: () => void;
+}) {
+  const sceneRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const bookAnchorRef = useRef<HTMLDivElement>(null);
+  const sourceRef = useRef<HTMLSpanElement>(null);
+  const useVisibleSourceRef = useRef<boolean | null>(null);
+  useLayoutEffect(() => {
+    const updatePath = () => {
+      const scene = sceneRef.current;
+      const card = cardRef.current;
+      const book = bookAnchorRef.current;
+      const icon = iconRef.current;
+      const source = sourceRef.current;
+      if (!scene || !card || !book || !icon || !source) return;
+      const sceneRect = scene.getBoundingClientRect();
+      const bookRect = book.getBoundingClientRect();
+      const iconRect = icon.getBoundingClientRect();
+      const iconX = iconRect.left + iconRect.width / 2;
+      const iconY = iconRect.top + iconRect.height / 2;
+      if (useVisibleSourceRef.current === null)
+        useVisibleSourceRef.current =
+          iconX < sceneRect.left ||
+          iconX > sceneRect.right ||
+          iconY < sceneRect.top ||
+          iconY > sceneRect.bottom;
+      source.style.left = `${Math.min(Math.max(iconX - sceneRect.left - 22, 12), Math.max(12, sceneRect.width - 56))}px`;
+      source.style.opacity = useVisibleSourceRef.current ? "1" : "0";
+      const originRect = useVisibleSourceRef.current
+        ? source.getBoundingClientRect()
+        : iconRect;
+      scene.style.setProperty(
+        "--book-origin-x",
+        `${originRect.left + originRect.width / 2 - (bookRect.left + bookRect.width / 2)}px`,
+      );
+      scene.style.setProperty(
+        "--book-origin-y",
+        `${originRect.top + originRect.height / 2 - (bookRect.top + bookRect.height / 2)}px`,
+      );
+      scene.style.setProperty(
+        "--flight-y",
+        `${bookRect.top + 58 - (sceneRect.top + card.offsetTop)}px`,
+      );
+    };
+    updatePath();
+    const frame = requestAnimationFrame(updatePath);
+    window.addEventListener("resize", updatePath);
+    window.addEventListener("scroll", updatePath, { passive: true });
+    window.visualViewport?.addEventListener("resize", updatePath);
+    window.visualViewport?.addEventListener("scroll", updatePath);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updatePath);
+      window.removeEventListener("scroll", updatePath);
+      window.visualViewport?.removeEventListener("resize", updatePath);
+      window.visualViewport?.removeEventListener("scroll", updatePath);
+    };
+  }, [iconRef]);
+  return (
+    <div
+      ref={sceneRef}
+      className="collection-animation"
+      aria-hidden="true"
+      onAnimationEnd={(event) => {
+        if (event.target === event.currentTarget) onComplete();
+      }}
+    >
+      <div ref={cardRef} className="collection-animation-card">
+        <PlayerAvatar player={player} />
+        <div className="collection-animation-card-info">
+          <span>선수카드</span>
+          <strong>{player.name}</strong>
+          <small>{player.club}</small>
+        </div>
+      </div>
+      <span ref={sourceRef} className="collection-animation-source">
+        <Icon name="book" />
+      </span>
+      <div ref={bookAnchorRef} className="collection-animation-book-anchor">
+        <div className="collection-animation-book">
+          <svg viewBox="0 0 200 115" fill="none" aria-hidden="true">
+            <ellipse cx="100" cy="101" rx="90" ry="10" fill="currentColor" opacity=".16" />
+            <path
+              d="M10 22Q51 8 100 26q49-18 90-4v70q-44-12-90 8-46-20-90-8Z"
+              fill="var(--accent-soft)"
+              stroke="currentColor"
+              strokeWidth="3"
+            />
+            <path
+              d="M18 16Q59 5 100 25v67Q58 71 18 82Z"
+              fill="var(--surface)"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <path
+              d="M182 16q-41-11-82 9v67q42-21 82-10Z"
+              fill="var(--surface)"
+              stroke="currentColor"
+              strokeWidth="2"
+            />
+            <path
+              d="M100 25v67M30 36q28-5 55 6M30 51q28-5 55 6m85-21q-28-5-55 6m55 9q-28-5-55 6"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeWidth="2"
+              opacity=".65"
+            />
+          </svg>
+          <span>{mode === "daily" ? "프리미어리그 도감" : "TOP 250 도감"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 export default function App() {
   const rewarded = useRewardedAd();
   const interstitial = useInterstitialAd(rewarded.settled);
@@ -439,6 +680,17 @@ export default function App() {
   const [modal, setModal] = useState<ModalType>(null),
     [toast, setToast] = useState(""),
     [tick, setTick] = useState(Date.now());
+  const [collectionTab, setCollectionTab] = useState<Mode>(state.mode);
+  const collectionIconRef = useRef<HTMLButtonElement>(null);
+  const [collectionAnimation, setCollectionAnimation] = useState<{
+    player: Player;
+    mode: Mode;
+    roundKey: string;
+  } | null>(null);
+  const openCollection = (mode: Mode) => {
+    setCollectionTab(mode);
+    setModal("collection");
+  };
   const [copied, setCopied] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   useEffect(() => {
@@ -456,6 +708,17 @@ export default function App() {
     done = state.daily.filter(
       (r) => r.status !== "playing" && r.status !== "rewardOffer",
     ).length;
+  const roundKey = `${state.date}:${state.mode}:${state.mode === "daily" ? state.active : "unlimited"}:${round.answer}`;
+  useEffect(() => {
+    setCollectionAnimation((current) =>
+      current?.roundKey === roundKey ? current : null,
+    );
+  }, [roundKey]);
+  useEffect(() => {
+    if (!collectionAnimation) return;
+    const timer = window.setTimeout(() => setCollectionAnimation(null), 3900);
+    return () => window.clearTimeout(timer);
+  }, [collectionAnimation]);
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -504,6 +767,18 @@ export default function App() {
     dispatch({ type: "mode", mode });
     setCopied(false);
   };
+  const submitGuess = (id: string) => {
+    if (
+      id === round.answer &&
+      round.status === "playing" &&
+      !round.guesses.includes(id) &&
+      round.guesses.length < attemptLimit &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      setCollectionAnimation({ player: answer, mode: state.mode, roundKey });
+    }
+    dispatch({ type: "guess", id });
+  };
   return (
     <div className="app-shell">
       <main className="page">
@@ -515,6 +790,16 @@ export default function App() {
                 <span className="eyebrow-label">FOOTBALL IDENTITY QUIZ</span>
               </div>
               <div className="hero-utilities">
+                <button
+                  ref={collectionIconRef}
+                  type="button"
+                  className="icon-button"
+                  onClick={() => openCollection(state.mode)}
+                  aria-label={`선수 도감 보기, ${state.collections.daily.length + state.collections.unlimited.length}장 수집`}
+                  title="선수 도감"
+                >
+                  <Icon name="book" />
+                </button>
                 <button
                   type="button"
                   className="icon-button theme-toggle"
@@ -683,7 +968,7 @@ export default function App() {
                 key={`${state.mode}-${round.answer}`}
                 mode={state.mode}
                 guesses={round.guesses}
-                onGuess={(id) => dispatch({ type: "guess", id })}
+                onGuess={submitGuess}
               />
             )}
             {rewardOffer && (
@@ -749,9 +1034,7 @@ export default function App() {
                           : "FULL TIME"}
                     </span>
                     <h3>{answer.name}</h3>
-                    <p>
-                      {answer.club} · {answer.position}
-                    </p>
+                    <p>{answer.club}</p>
                   </div>
                   <span className="result-score">
                     {round.status === "won"
@@ -766,6 +1049,16 @@ export default function App() {
                       ? "정답 공개로 이번 도전을 마쳤어요."
                       : "이번 도전을 마쳤어요. 다음 선수에게 도전해 보세요."}
                 </p>
+                {round.status === "won" && (
+                  <button
+                    type="button"
+                    className="collection-earned"
+                    onClick={() => openCollection(state.mode)}
+                  >
+                    <Icon name="book" />
+                    <span>이 선수카드를 도감에서 확인하세요</span>
+                  </button>
+                )}
                 <div className="result-buttons">
                   <button className="button secondary" onClick={share}>
                     <Icon name={copied ? "check" : "share"} />
@@ -1037,6 +1330,15 @@ export default function App() {
           {toast}
         </div>
       )}
+      {collectionAnimation && (
+        <CollectionAnimation
+          key={collectionAnimation.roundKey}
+          player={collectionAnimation.player}
+          mode={collectionAnimation.mode}
+          iconRef={collectionIconRef}
+          onComplete={() => setCollectionAnimation(null)}
+        />
+      )}
       {modal && (
         <Modal
           title={
@@ -1044,14 +1346,23 @@ export default function App() {
               ? "게임 방법"
               : modal === "stats"
                 ? "나의 스카우팅 기록"
-                : modal === "reveal"
-                  ? "정답을 공개할까요?"
-                  : "결과 공유"
+                : modal === "collection"
+                  ? "선수 도감"
+                  : modal === "reveal"
+                    ? "정답을 공개할까요?"
+                    : "결과 공유"
           }
           onClose={() => setModal(null)}
         >
           {modal === "help" ? (
             <HelpContent mode={state.mode} />
+          ) : modal === "collection" ? (
+            <CollectionContent
+              collections={state.collections}
+              dailyCollectionDates={state.dailyCollectionDates}
+              selected={collectionTab}
+              onSelect={setCollectionTab}
+            />
           ) : modal === "reveal" ? (
             <>
               <p className="modal-intro">

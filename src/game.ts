@@ -30,12 +30,14 @@ export interface Stats {
   distribution: number[];
 }
 export interface GameState {
-  version: 4;
+  version: 6;
   date: string;
   mode: Mode;
   daily: Round[];
   active: number;
   unlimited: Round;
+  collections: Record<Mode, string[]>;
+  dailyCollectionDates: Record<string, string>;
   stats: Stats;
   legacyStats?: Omit<Stats, "totalAttempts">;
 }
@@ -135,12 +137,14 @@ function recordDailyResult(
 }
 export function initialState(date = dayKey()): GameState {
   return {
-    version: 4,
+    version: 6,
     date,
     mode: "daily",
     daily: dailyAnswers(date).map(makeRound),
     active: 0,
     unlimited: makeRound(randomAnswer()),
+    collections: { daily: [], unlimited: [] },
+    dailyCollectionDates: {},
     stats: emptyStats(),
   };
 }
@@ -376,20 +380,41 @@ export function reducer(state: GameState, action: Action): GameState {
     state.mode === "daily"
       ? recordDailyResult(state.stats, round)
       : state.stats;
+  const collections =
+    round.status === "won" &&
+    !state.collections[state.mode].includes(round.answer)
+      ? {
+          ...state.collections,
+          [state.mode]: [...state.collections[state.mode], round.answer],
+        }
+      : state.collections;
+  const dailyCollectionDates =
+    state.mode === "daily" &&
+    round.status === "won" &&
+    !state.dailyCollectionDates[round.answer]
+      ? { ...state.dailyCollectionDates, [round.answer]: state.date }
+      : state.dailyCollectionDates;
   return state.mode === "daily"
     ? {
         ...state,
         stats,
+        collections,
+        dailyCollectionDates,
         daily: state.daily.map((r, i) => (i === state.active ? round : r)),
       }
-    : { ...state, stats, unlimited: round };
+    : { ...state, stats, collections, unlimited: round };
 }
 export function restore(raw: string | null, date = dayKey()): GameState {
   const fresh = () => initialState(date);
   try {
     if (!raw) return fresh();
-    const s = JSON.parse(raw) as Omit<GameState, "version"> & {
+    const s = JSON.parse(raw) as Omit<
+      GameState,
+      "version" | "collections" | "dailyCollectionDates"
+    > & {
       version: number;
+      collections?: unknown;
+      dailyCollectionDates?: unknown;
     };
     const legacyRules = s.version === 1;
     const mixedStats = s.version < 3;
@@ -437,7 +462,7 @@ export function restore(raw: string | null, date = dayKey()): GameState {
       ].every((n) => Number.isInteger(n) && n >= 0) &&
       stats.won <= stats.played;
     if (
-      ![1, 2, 3, 4].includes(s.version) ||
+      ![1, 2, 3, 4, 5, 6].includes(s.version) ||
       !["daily", "unlimited"].includes(s.mode) ||
       !/^\d{4}-\d{2}-\d{2}$/.test(s.date) ||
       !Array.isArray(s.daily) ||
@@ -492,6 +517,57 @@ export function restore(raw: string | null, date = dayKey()): GameState {
         ? s.daily.slice(0, DAILY_COUNT).map(normalizeRound)
         : dailyAnswers(date).map(makeRound);
     const unlimited = normalizeRound(s.unlimited);
+    const savedCollections =
+      s.version >= 5 &&
+      s.collections &&
+      typeof s.collections === "object" &&
+      !Array.isArray(s.collections)
+        ? (s.collections as Partial<Record<Mode, unknown>>)
+        : {};
+    const collectedIds = (mode: Mode, wonAnswers: string[]) => {
+      const pool = new Set(pools[mode]);
+      const saved = savedCollections[mode];
+      return [
+        ...new Set(
+          [...(Array.isArray(saved) ? saved : []), ...wonAnswers].filter(
+            (id): id is string => typeof id === "string" && pool.has(id),
+          ),
+        ),
+      ];
+    };
+    const collections: Record<Mode, string[]> = {
+      daily: collectedIds(
+        "daily",
+        s.daily
+          .filter((round) => round.status === "won")
+          .map((round) => round.answer),
+      ),
+      unlimited: collectedIds(
+        "unlimited",
+        s.unlimited.status === "won" ? [s.unlimited.answer] : [],
+      ),
+    };
+    const savedDailyDates =
+      s.version === 6 &&
+      s.dailyCollectionDates &&
+      typeof s.dailyCollectionDates === "object" &&
+      !Array.isArray(s.dailyCollectionDates)
+        ? (s.dailyCollectionDates as Record<string, unknown>)
+        : {};
+    const dailyCollectionDates: Record<string, string> = {};
+    const collectedDailyIds = new Set(collections.daily);
+    for (const [id, savedDate] of Object.entries(savedDailyDates)) {
+      if (
+        collectedDailyIds.has(id) &&
+        typeof savedDate === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(savedDate)
+      )
+        dailyCollectionDates[id] = savedDate;
+    }
+    for (const round of s.daily) {
+      if (round.status === "won" && !dailyCollectionDates[round.answer])
+        dailyCollectionDates[round.answer] = s.date;
+    }
     let stats = {
       ...s.stats,
       distribution: Array.from(
@@ -516,11 +592,13 @@ export function restore(raw: string | null, date = dayKey()): GameState {
     }
     return {
       ...s,
-      version: 4,
+      version: 6,
       date,
       active: 0,
       daily,
       unlimited,
+      collections,
+      dailyCollectionDates,
       stats,
       ...(mixedStats
         ? {
