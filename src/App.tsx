@@ -437,7 +437,7 @@ function HelpContent({ mode }: { mode: Mode }) {
         <p>
           <p>프로모션 중!</p>
           오늘의 챌린지를 5일 연속
-          성공할 때마다 500포인트를 지급해요. 실패하거나 하루를 쉬면 연속
+          성공할 때마다 500 토스 포인트를 지급해요. 실패하거나 하루를 쉬면 연속
           기록이 초기화돼요. 달성 후 지급하며, 예산이
           소진되면 일찍 종료될 수 있어요.
         </p>
@@ -1401,8 +1401,8 @@ export default function App() {
                       <strong>5일 연속 성공 보상</strong>
                       <span>{promotionProgress}/{PROMOTION_STREAK_DAYS}일</span>
                     </div>
-                    <p>5일마다 500포인트 · 실패하거나 하루 쉬면 초기화</p>
-                    <p>12월 31일까지 · 예산 소진 시 조기 종료</p>
+                    <p>5일마다 500 토스포인트</p><p>실패하거나 하루 쉬면 초기화</p>
+                    <p>예산 소진 시 조기 종료</p>
                   </div>
                 )}
               </section>
