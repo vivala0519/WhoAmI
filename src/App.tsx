@@ -6,6 +6,17 @@ import { ParticleBall } from "./ParticleBall";
 import { useInterstitialAd } from "./useInterstitialAd";
 import { useRewardedAd } from "./useRewardedAd";
 import {
+  grantPromotionMilestone,
+  PROMOTION_TEST_MODE,
+} from "./promotion";
+import {
+  PROMOTION_END_DATE,
+  PROMOTION_REWARD_POINTS,
+  PROMOTION_START_DATE,
+  PROMOTION_STREAK_DAYS,
+} from "./promotionConfig";
+import type { PromotionOutcome } from "./promotion";
+import {
   activeRound,
   averageWinningAttempts,
   categoriesForMode,
@@ -28,6 +39,29 @@ import type { Clue, Mode, Player } from "./game";
 
 const STORAGE_KEY = "who-am-i-ko:v1";
 type ModalType = "help" | "stats" | "collection" | "reveal" | "share" | null;
+type VisiblePromotionOutcome = PromotionOutcome | { status: "pending" } | null;
+function promotionOutcomeText(outcome: VisiblePromotionOutcome) {
+  switch (outcome?.status) {
+    case "paid":
+      return PROMOTION_TEST_MODE
+        ? "테스트 포인트 지급을 완료했어요."
+        : `${PROMOTION_REWARD_POINTS}포인트 지급을 완료했어요.`;
+    case "unsupported":
+      return "토스 앱을 업데이트한 뒤 포인트 지급을 확인해 주세요.";
+    case "retryable":
+      return "프로모션이 아직 시작되지 않았어요. 시작 후 다시 확인해 주세요.";
+    case "unavailable":
+      return outcome.code === "4112"
+        ? "프로모션 예산이 소진되어 지급하지 못했어요."
+        : "프로모션이 종료되었거나 지급할 수 없는 상태예요.";
+    case "storageError":
+      return "기록을 저장할 수 없어 포인트 지급을 진행하지 못했어요.";
+    case "uncertain":
+      return "지급 결과를 확인하지 못했어요. 포인트 내역을 확인해 주세요.";
+    default:
+      return "포인트 지급을 확인하고 있어요.";
+  }
+}
 function Kit({
   number = "?",
   color = "var(--accent)",
@@ -400,6 +434,13 @@ function HelpContent({ mode }: { mode: Mode }) {
           프리미어리그, 시장가치 약 45억 원 이상 선수 중 매일 1명. 한국 시간
           자정에 새로운 문제가 열려요.
         </p>
+        <p>
+          <p>프로모션 중!</p>
+          오늘의 챌린지를 5일 연속
+          성공할 때마다 500포인트를 지급해요. 실패하거나 하루를 쉬면 연속
+          기록이 초기화돼요. 달성 후 지급하며, 예산이
+          소진되면 일찍 종료될 수 있어요.
+        </p>
         <strong>무제한 모드</strong>
         <p>
           수집 시점의 세계 시장가치 상위 250명 중 한 명. 원하는 만큼 계속
@@ -687,6 +728,10 @@ export default function App() {
     mode: Mode;
     roundKey: string;
   } | null>(null);
+  const [promotionOutcome, setPromotionOutcome] = useState<{
+    date: string;
+    outcome: Exclude<VisiblePromotionOutcome, null>;
+  } | null>(null);
   const openCollection = (mode: Mode) => {
     setCollectionTab(mode);
     setModal("collection");
@@ -727,6 +772,19 @@ export default function App() {
       setStorageError(true);
     }
   }, [state]);
+  useEffect(() => {
+    const date = state.promotion.milestoneDate;
+    if (!date || state.date < PROMOTION_START_DATE || state.date > PROMOTION_END_DATE)
+      return;
+    let active = true;
+    setPromotionOutcome({ date, outcome: { status: "pending" } });
+    void grantPromotionMilestone(date).then((outcome) => {
+      if (active) setPromotionOutcome({ date, outcome });
+    });
+    return () => {
+      active = false;
+    };
+  }, [state.promotion.milestoneDate, state.date]);
   useEffect(() => {
     const update = () => {
       setTick(Date.now());
@@ -779,6 +837,25 @@ export default function App() {
     }
     dispatch({ type: "guess", id });
   };
+  const retryPromotion = (date: string) => {
+    setPromotionOutcome({ date, outcome: { status: "pending" } });
+    void grantPromotionMilestone(date).then((outcome) =>
+      setPromotionOutcome({ date, outcome }),
+    );
+  };
+  const promotionActive =
+    state.date >= PROMOTION_START_DATE && state.date <= PROMOTION_END_DATE;
+  const promotionProgress =
+    state.promotion.streak > 0 &&
+    state.promotion.streak % PROMOTION_STREAK_DAYS === 0
+      ? PROMOTION_STREAK_DAYS
+      : state.promotion.streak % PROMOTION_STREAK_DAYS;
+  const achievedPromotionToday =
+    state.mode === "daily" &&
+    round.status === "won" &&
+    state.promotion.milestoneDate === state.date;
+  const currentPromotionOutcome =
+    promotionOutcome?.date === state.date ? promotionOutcome.outcome : null;
   return (
     <div className="app-shell">
       <main className="page">
@@ -839,6 +916,25 @@ export default function App() {
             <ParticleBall theme={theme} />
           </div>
         </section>
+        {PROMOTION_TEST_MODE && (
+          <section className="promotion-test-banner" aria-label="프로모션 테스트">
+            <div>
+              <strong>프로모션 테스트 모드</strong>
+              <p>5일을 기다리지 않고 테스트 코드를 1회 호출해요.</p>
+              {currentPromotionOutcome && (
+                <p role="status">{promotionOutcomeText(currentPromotionOutcome)}</p>
+              )}
+            </div>
+            <button
+              type="button"
+              className="button secondary"
+              disabled={currentPromotionOutcome?.status === "pending"}
+              onClick={() => retryPromotion(state.date)}
+            >
+              테스트 포인트 지급 확인
+            </button>
+          </section>
+        )}
         <div className="mode-bar">
           <div className="mode-tabs" role="tablist" aria-label="게임 모드">
             <button
@@ -1049,6 +1145,21 @@ export default function App() {
                       ? "정답 공개로 이번 도전을 마쳤어요."
                       : "이번 도전을 마쳤어요. 다음 선수에게 도전해 보세요."}
                 </p>
+                {achievedPromotionToday && (
+                  <div className="promotion-result" role="status">
+                    <strong>5일 연속 성공 보상</strong>
+                    <p>{promotionOutcomeText(currentPromotionOutcome)}</p>
+                    {currentPromotionOutcome?.status === "retryable" && (
+                      <button
+                        type="button"
+                        className="button secondary"
+                        onClick={() => retryPromotion(state.date)}
+                      >
+                        지급 다시 확인
+                      </button>
+                    )}
+                  </div>
+                )}
                 {round.status === "won" && (
                   <button
                     type="button"
@@ -1284,6 +1395,16 @@ export default function App() {
                 <div className="daily-track">
                   <span style={{ width: `${(done / DAILY_COUNT) * 100}%` }} />
                 </div>
+                {promotionActive && (
+                  <div className="promotion-progress">
+                    <div>
+                      <strong>5일 연속 성공 보상</strong>
+                      <span>{promotionProgress}/{PROMOTION_STREAK_DAYS}일</span>
+                    </div>
+                    <p>5일마다 500포인트 · 실패하거나 하루 쉬면 초기화</p>
+                    <p>12월 31일까지 · 예산 소진 시 조기 종료</p>
+                  </div>
+                )}
               </section>
               <button
                 type="button"

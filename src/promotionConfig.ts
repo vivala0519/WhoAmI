@@ -1,0 +1,4 @@
+export const PROMOTION_START_DATE = "2026-11-05";
+export const PROMOTION_END_DATE = "2026-12-31";
+export const PROMOTION_REWARD_POINTS = 500;
+export const PROMOTION_STREAK_DAYS = 5;

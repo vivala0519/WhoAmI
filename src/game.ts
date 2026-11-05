@@ -1,5 +1,10 @@
 import dataset from "./players.json";
 import dailySchedule from "./daily-schedule.json";
+import {
+  PROMOTION_END_DATE,
+  PROMOTION_START_DATE,
+  PROMOTION_STREAK_DAYS,
+} from "./promotionConfig";
 export type Player = (typeof dataset.players)[number];
 export type Mode = "daily" | "unlimited";
 export type Status = "playing" | "rewardOffer" | "won" | "lost" | "revealed";
@@ -30,7 +35,7 @@ export interface Stats {
   distribution: number[];
 }
 export interface GameState {
-  version: 6;
+  version: 7;
   date: string;
   mode: Mode;
   daily: Round[];
@@ -38,6 +43,11 @@ export interface GameState {
   unlimited: Round;
   collections: Record<Mode, string[]>;
   dailyCollectionDates: Record<string, string>;
+  promotion: {
+    streak: number;
+    lastWinDate: string | null;
+    milestoneDate: string | null;
+  };
   stats: Stats;
   legacyStats?: Omit<Stats, "totalAttempts">;
 }
@@ -71,6 +81,37 @@ export function dayKey(date = new Date()) {
   }).formatToParts(date);
   const get = (type: string) => parts.find((p) => p.type === type)!.value;
   return `${get("year")}-${get("month")}-${get("day")}`;
+}
+function previousDay(date: string) {
+  return new Date(Date.parse(`${date}T00:00:00Z`) - 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
+function promotionForDate(
+  promotion: GameState["promotion"],
+  date: string,
+): GameState["promotion"] {
+  return promotion.lastWinDate === date ||
+    promotion.lastWinDate === previousDay(date)
+    ? promotion
+    : { ...promotion, streak: 0, lastWinDate: null };
+}
+function recordPromotionResult(
+  promotion: GameState["promotion"],
+  date: string,
+  status: Status,
+): GameState["promotion"] {
+  if (status === "playing" || status === "rewardOffer") return promotion;
+  if (status !== "won" || date < PROMOTION_START_DATE || date > PROMOTION_END_DATE)
+    return { ...promotion, streak: 0, lastWinDate: null };
+  const streak =
+    promotion.lastWinDate === previousDay(date) ? promotion.streak + 1 : 1;
+  return {
+    streak,
+    lastWinDate: date,
+    milestoneDate:
+      streak % PROMOTION_STREAK_DAYS === 0 ? date : promotion.milestoneDate,
+  };
 }
 // Keep the published schedule stable across visits and player-data updates.
 export const DAILY_SCHEDULE_START = dailySchedule.startDate;
@@ -137,7 +178,7 @@ function recordDailyResult(
 }
 export function initialState(date = dayKey()): GameState {
   return {
-    version: 6,
+    version: 7,
     date,
     mode: "daily",
     daily: dailyAnswers(date).map(makeRound),
@@ -145,6 +186,7 @@ export function initialState(date = dayKey()): GameState {
     unlimited: makeRound(randomAnswer()),
     collections: { daily: [], unlimited: [] },
     dailyCollectionDates: {},
+    promotion: { streak: 0, lastWinDate: null, milestoneDate: null },
     stats: emptyStats(),
   };
 }
@@ -300,6 +342,7 @@ export function reducer(state: GameState, action: Action): GameState {
           date: action.date,
           daily: dailyAnswers(action.date).map(makeRound),
           active: 0,
+          promotion: promotionForDate(state.promotion, action.date),
         };
   if (action.type === "daily")
     return action.index >= 0 &&
@@ -346,6 +389,7 @@ export function reducer(state: GameState, action: Action): GameState {
       ? {
           ...state,
           stats: recordDailyResult(state.stats, round),
+          promotion: recordPromotionResult(state.promotion, state.date, round.status),
           daily: state.daily.map((r, i) => (i === state.active ? round : r)),
         }
       : { ...state, unlimited: round };
@@ -398,6 +442,7 @@ export function reducer(state: GameState, action: Action): GameState {
     ? {
         ...state,
         stats,
+        promotion: recordPromotionResult(state.promotion, state.date, round.status),
         collections,
         dailyCollectionDates,
         daily: state.daily.map((r, i) => (i === state.active ? round : r)),
@@ -410,11 +455,12 @@ export function restore(raw: string | null, date = dayKey()): GameState {
     if (!raw) return fresh();
     const s = JSON.parse(raw) as Omit<
       GameState,
-      "version" | "collections" | "dailyCollectionDates"
+      "version" | "collections" | "dailyCollectionDates" | "promotion"
     > & {
       version: number;
       collections?: unknown;
       dailyCollectionDates?: unknown;
+      promotion?: unknown;
     };
     const legacyRules = s.version === 1;
     const mixedStats = s.version < 3;
@@ -462,7 +508,7 @@ export function restore(raw: string | null, date = dayKey()): GameState {
       ].every((n) => Number.isInteger(n) && n >= 0) &&
       stats.won <= stats.played;
     if (
-      ![1, 2, 3, 4, 5, 6].includes(s.version) ||
+      ![1, 2, 3, 4, 5, 6, 7].includes(s.version) ||
       !["daily", "unlimited"].includes(s.mode) ||
       !/^\d{4}-\d{2}-\d{2}$/.test(s.date) ||
       !Array.isArray(s.daily) ||
@@ -548,7 +594,7 @@ export function restore(raw: string | null, date = dayKey()): GameState {
       ),
     };
     const savedDailyDates =
-      s.version === 6 &&
+      s.version >= 6 &&
       s.dailyCollectionDates &&
       typeof s.dailyCollectionDates === "object" &&
       !Array.isArray(s.dailyCollectionDates)
@@ -590,15 +636,36 @@ export function restore(raw: string | null, date = dayKey()): GameState {
           s.daily[0].guesses.length,
         );
     }
+    const savedPromotion = s.version === 7 ? s.promotion : null;
+    const validPromotion =
+      savedPromotion &&
+      typeof savedPromotion === "object" &&
+      !Array.isArray(savedPromotion) &&
+      Number.isInteger((savedPromotion as GameState["promotion"]).streak) &&
+      (savedPromotion as GameState["promotion"]).streak >= 0 &&
+      ["lastWinDate", "milestoneDate"].every((key) => {
+        const value = (savedPromotion as Record<string, unknown>)[key];
+        return value === null ||
+          (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value));
+      });
+    const promotion: GameState["promotion"] = validPromotion
+      ? promotionForDate(savedPromotion as GameState["promotion"], date)
+      : s.date === date &&
+          daily[0]?.status === "won" &&
+          date >= PROMOTION_START_DATE &&
+          date <= PROMOTION_END_DATE
+        ? { streak: 1, lastWinDate: date, milestoneDate: null }
+        : { streak: 0, lastWinDate: null, milestoneDate: null };
     return {
       ...s,
-      version: 6,
+      version: 7,
       date,
       active: 0,
       daily,
       unlimited,
       collections,
       dailyCollectionDates,
+      promotion,
       stats,
       ...(mixedStats
         ? {
