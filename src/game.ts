@@ -706,7 +706,6 @@ export function shareText(state: GameState) {
     `평균 시도 횟수: ${averageAttempts === null ? "—" : `${averageAttempts.toFixed(1)}회`}`,
     `현재 연승: ${state.stats.streak}연승`,
     "",
-    "나도 풀러 가기",
     "https://tossminiapp.com/s/p42d6aeg",
   ].join("\n");
 }
