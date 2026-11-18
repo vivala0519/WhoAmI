@@ -215,11 +215,12 @@ function Search({
 }) {
   const [query, setQuery] = useState(""),
     [focused, setFocused] = useState(false),
+    [resultsDismissed, setResultsDismissed] = useState(false),
     [highlight, setHighlight] = useState(0);
   const results = searchPlayers(query, mode, guesses),
     listId = useId(),
     input = useRef<HTMLInputElement>(null);
-  const open = focused && query.trim().length > 0;
+  const open = !resultsDismissed && query.trim().length > 0;
   const pick = (p: Player) => {
     onGuess(p.id);
     setQuery("");
@@ -238,7 +239,9 @@ function Search({
           aria-controls={listId}
           aria-expanded={open}
           aria-activedescendant={
-            open && results[highlight] ? `${listId}-${highlight}` : undefined
+            focused && open && results[highlight]
+              ? `${listId}-${highlight}`
+              : undefined
           }
           autoComplete="off"
           placeholder={
@@ -249,23 +252,22 @@ function Search({
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
+            setResultsDismissed(false);
             setHighlight(0);
           }}
-          onFocus={() => setFocused(true)}
-          onBlur={(e) => {
-            if (
-              !e.currentTarget.parentElement?.parentElement?.contains(
-                e.relatedTarget,
-              )
-            )
-              setFocused(false);
+          onFocus={() => {
+            setFocused(true);
+            setResultsDismissed(false);
           }}
+          onBlur={() => setFocused(false)}
           onKeyDown={(e) => {
             if (e.nativeEvent.isComposing) return;
             if (e.key === "ArrowDown") {
               e.preventDefault();
-              setFocused(true);
-              setHighlight((i) => Math.min(i + 1, results.length - 1));
+              setResultsDismissed(false);
+              setHighlight((i) =>
+                open && results.length ? Math.min(i + 1, results.length - 1) : 0,
+              );
             }
             if (e.key === "ArrowUp") {
               e.preventDefault();
@@ -275,7 +277,7 @@ function Search({
               e.preventDefault();
               pick(results[highlight]);
             }
-            if (e.key === "Escape") setFocused(false);
+            if (e.key === "Escape") setResultsDismissed(true);
           }}
         />
         {query ? (
